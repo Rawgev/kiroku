@@ -142,3 +142,15 @@ This log tracks all architectural changes, feature implementations, and bug fixe
     *   [AnimeDetail.tsx](file:///c:/padhai/projects/kiroku/client/src/pages/AnimeDetail.tsx)
     *   [MangaDetail.tsx](file:///c:/padhai/projects/kiroku/client/src/pages/MangaDetail.tsx)
     *   [Pages.tsx](file:///c:/padhai/projects/kiroku/client/src/pages/Pages.tsx)
+
+---
+
+### 13. Favicon Bounding Box Crop & Optimization
+*   **Improvement**: Fixed Kiroku's browser tab favicon appearing extremely small compared to other sites.
+*   **Cause**: The original icon had a large amount of empty transparent padding around the actual artwork, causing browsers to scale down the icon and render the logo too small.
+*   **Fix**:
+    *   Wrote and executed a Python script using Pillow to auto-detect the bounding box of non-transparent pixels, cropping out all empty margins.
+    *   Centered and rescaled the cropped square logo to a high-resolution 256x256 format.
+    *   Optimized file output, reducing it from 1.17 MB down to a highly responsive 67 KB.
+*   **File Changes**:
+    *   [favicon.png](file:///c:/padhai/projects/kiroku/client/public/favicon.png)
