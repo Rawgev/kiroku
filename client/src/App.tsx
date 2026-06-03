@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
@@ -10,6 +11,7 @@ import Library from './pages/Library';
 import Stats from './pages/Stats';
 import { Profile, Community, WatchPartyPage, Login, Register, OAuthCallback, Admin } from './pages/Pages';
 import { C } from './constants/colors';
+import { HealthCheckLoader } from './components/ui/HealthCheckLoader';
 
 // ── Protected route wrapper ────────────────────────────────────────────────
 function Protected({ children }: { children: React.ReactNode }) {
@@ -43,6 +45,12 @@ function ProfileRedirect() {
 }
 
 export default function App() {
+  const [serverReady, setServerReady] = useState(false);
+
+  if (!serverReady) {
+    return <HealthCheckLoader onComplete={() => setServerReady(true)} />;
+  }
+
   return (
     <ThemeProvider>
     <AuthProvider>
