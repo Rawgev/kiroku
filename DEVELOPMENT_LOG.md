@@ -154,3 +154,14 @@ This log tracks all architectural changes, feature implementations, and bug fixe
     *   Optimized file output, reducing it from 1.17 MB down to a highly responsive 67 KB.
 *   **File Changes**:
     *   [favicon.png](file:///c:/padhai/projects/kiroku/client/public/favicon.png)
+
+---
+
+### 14. Horizontal Scroll Scrollbar Text Clipping Fix (Mobile & Tablet)
+*   **Bug**: On narrow viewports (mobile phones/tablets), native browser scrollbars for horizontal scroll containers (`HScroll` & Recommendations) took up layout height, overlapping and clipping the bottom half of the manga chapter counts and card details (e.g. `232 ch` text cut off).
+*   **Fix**:
+    *   Increased bottom padding in `HScroll` inside `components/ui/index.tsx` from `8px` to `20px`, and added a corresponding `-12px` negative margin-bottom to retain optimal layout spacing.
+    *   Applied the same scrollbar spacing fix to the "You Might Also Like" recommendations list in `AnimeDetail.tsx`.
+*   **File Changes**:
+    *   [index.tsx](file:///c:/padhai/projects/kiroku/client/src/components/ui/index.tsx#L139-L146)
+    *   [AnimeDetail.tsx](file:///c:/padhai/projects/kiroku/client/src/pages/AnimeDetail.tsx#L283-L291)

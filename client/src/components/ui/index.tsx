@@ -139,7 +139,7 @@ export function SectionHeader({ title, subtitle, onViewAll }: { title: string; s
 // ── HScroll ────────────────────────────────────────────────
 export function HScroll({ children }: { children: ReactNode }) {
   return (
-    <div style={{ display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 8, scrollbarWidth: 'thin' }}>
+    <div style={{ display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 20, marginBottom: -12, scrollbarWidth: 'thin' }}>
       {children}
     </div>
   );

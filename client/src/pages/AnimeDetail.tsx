@@ -282,7 +282,7 @@ export default function AnimeDetail() {
           {(media.recommendations?.nodes?.length ?? 0) > 0 && (
             <div>
               <h3 style={{ fontSize: 15, fontWeight: 700, color: C.text, margin: '0 0 12px' }}>You Might Also Like</h3>
-              <div style={{ display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 8, scrollbarWidth: 'thin' }}>
+              <div style={{ display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 20, marginBottom: -12, scrollbarWidth: 'thin' }}>
                 {media.recommendations!.nodes.map((n) =>
                   n.mediaRecommendation
                     ? <AnimeCard key={n.mediaRecommendation.id} media={n.mediaRecommendation} w={130} h={185} />
