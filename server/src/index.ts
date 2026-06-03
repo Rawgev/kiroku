@@ -20,6 +20,9 @@ import watchPartyRoutes from './routes/watchparty';
 
 const app = express();
 
+// Trust proxy headers (needed for secure cookies behind Render/Vercel proxies)
+app.set('trust proxy', 1);
+
 // ── Database ───────────────────────────────────────────────
 connectDB();
 
