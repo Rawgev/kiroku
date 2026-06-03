@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { getLibrary, updateEntry, deleteEntry } from '../api/backend';
+import { getLibrary, updateEntry, deleteEntry, getReviews, createReview, updateReview, deleteReview } from '../api/backend';
 import { useAuth } from '../context/AuthContext';
 import { Modal, StatusBadge, StarRating, Spinner } from '../components/ui';
 import { C, STATUS_COLORS, STATUS_LABELS, inputStyle } from '../constants/colors';
@@ -33,6 +33,12 @@ export default function Library() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [isFavorite, setIsFavorite] = useState(false);
 
+  // Review states
+  const [revTitle, setRevTitle] = useState('');
+  const [revBody, setRevBody] = useState('');
+  const [userReview, setUserReview] = useState<any | null>(null);
+  const [reviewsLoading, setReviewsLoading] = useState(false);
+
   // Local filter states
   const [selectedType, setSelectedType] = useState<'ALL' | 'ANIME' | 'MANGA'>('ALL');
   const [selectedGenre, setSelectedGenre] = useState<string>('');
@@ -53,7 +59,30 @@ export default function Library() {
       .then(setEntries).catch(console.error).finally(() => setLoading(false));
   }, [user, filterStatus]);
 
-  const openEdit = (e: MediaEntry) => { setEditing(e); setScore(e.score); setProgress(e.progress); setStatus(e.status); setIsFavorite(e.isFavorite); };
+  const openEdit = (e: MediaEntry) => {
+    setEditing(e);
+    setScore(e.score);
+    setProgress(e.progress);
+    setStatus(e.status);
+    setIsFavorite(e.isFavorite);
+    setRevTitle('');
+    setRevBody('');
+    setUserReview(null);
+    if (user) {
+      setReviewsLoading(true);
+      getReviews({ mediaId: e.mediaId, userId: user._id })
+        .then((res) => {
+          if (res.reviews && res.reviews.length > 0) {
+            const rev = res.reviews[0];
+            setUserReview(rev);
+            setRevTitle(rev.title);
+            setRevBody(rev.body);
+          }
+        })
+        .catch(console.error)
+        .finally(() => setReviewsLoading(false));
+    }
+  };
 
   const handleSave = async () => {
     if (!editing) return;
@@ -68,9 +97,46 @@ export default function Library() {
         isFavorite,
       });
       setEntries((prev) => prev.map((e) => e._id === updated._id ? updated : e));
+
+      // Save / update review if populated
+      if (revTitle.trim() && revBody.trim()) {
+        if (userReview) {
+          await updateReview(userReview._id, {
+            title: revTitle,
+            body: revBody,
+            rating: score || 10,
+          });
+        } else {
+          await createReview({
+            mediaId: editing.mediaId,
+            mediaType: editing.mediaType,
+            mediaTitle: editing.title,
+            mediaCover: editing.coverImage,
+            rating: score || 10,
+            title: revTitle,
+            body: revBody,
+            spoiler: false,
+          });
+        }
+      }
+
       setEditing(null);
     } catch { alert('Failed to update.'); }
     finally { setSaving(false); }
+  };
+
+  const handleDeleteReview = async () => {
+    if (!userReview) return;
+    if (!window.confirm('Are you sure you want to delete your review?')) return;
+    try {
+      await deleteReview(userReview._id);
+      setUserReview(null);
+      setRevTitle('');
+      setRevBody('');
+      alert('Review deleted.');
+    } catch {
+      alert('Failed to delete review.');
+    }
   };
 
   const handleDelete = (id: string) => {
@@ -352,6 +418,41 @@ export default function Library() {
               ⭐ Add to Favorites
             </label>
           </div>
+
+          {/* Review Section */}
+          <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 16, marginTop: 8 }}>
+            <h3 style={{ fontSize: 13, fontWeight: 700, color: C.text, margin: '0 0 12px' }}>Your Review</h3>
+            {reviewsLoading ? (
+              <div style={{ display: 'flex', justifyContent: 'center', padding: 10 }}><Spinner size={24} /></div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <div>
+                  <label style={{ fontSize: 12, color: C.muted, display: 'block', marginBottom: 6 }}>Review Title</label>
+                  <input value={revTitle} onChange={(e) => setRevTitle(e.target.value)} maxLength={100}
+                    placeholder="e.g. Highly recommended!"
+                    style={{ width: '100%', padding: '9px 12px', background: C.bg2, border: `1px solid ${C.border}`,
+                      borderRadius: 9, color: C.text, fontSize: 13, outline: 'none', fontFamily: 'inherit' }} />
+                </div>
+                <div>
+                  <label style={{ fontSize: 12, color: C.muted, display: 'block', marginBottom: 6 }}>Review Body</label>
+                  <textarea value={revBody} onChange={(e) => setRevBody(e.target.value)} rows={4} maxLength={2000}
+                    placeholder="Write your review thoughts..."
+                    style={{ width: '100%', padding: '9px 12px', background: C.bg2, border: `1px solid ${C.border}`,
+                      borderRadius: 9, color: C.text, fontSize: 13, outline: 'none', fontFamily: 'inherit', resize: 'vertical' }} />
+                </div>
+                {userReview && (
+                  <button type="button" onClick={handleDeleteReview}
+                    style={{
+                      alignSelf: 'flex-start', padding: '6px 12px', background: `${C.danger}15`, border: `1px solid ${C.danger}40`,
+                      borderRadius: 8, color: C.danger, fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit'
+                    }}>
+                    🗑️ Delete Review
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+
           <button onClick={handleSave} disabled={saving}
             style={{
               padding: '10px 0', background: C.accent, border: 'none', borderRadius: 10,
@@ -422,7 +523,7 @@ function KanbanCard({ entry, onEdit, onDelete }: { entry: MediaEntry; onEdit: ()
           )}
         </div>
       </div>
-      {hov && (
+      {(hov || window.innerWidth < 768) && (
         <div style={{ display: 'flex', gap: 6, marginTop: 12 }}>
           <button onClick={onEdit}
             style={{
@@ -503,58 +604,6 @@ function LibraryCard({ entry, onEdit, onDelete }: { entry: MediaEntry; onEdit: (
         >
           <StatusBadge status={entry.status} />
         </div>
-        {/* Hover Overlay */}
-        {hov && (
-          <div
-            style={{
-              position: 'absolute',
-              inset: 0,
-              background: 'linear-gradient(to top, rgba(11,16,32,0.95) 0%, rgba(11,16,32,0.4) 60%, transparent 100%)',
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'flex-end',
-              padding: 10,
-              gap: 6,
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div style={{ display: 'flex', gap: 6 }}>
-              <button
-                onClick={onEdit}
-                style={{
-                  flex: 1,
-                  padding: '6px 0',
-                  background: C.accent,
-                  border: 'none',
-                  borderRadius: 7,
-                  color: '#fff',
-                  fontSize: 11,
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  fontFamily: 'inherit',
-                }}
-              >
-                Edit
-              </button>
-              <button
-                onClick={onDelete}
-                style={{
-                  padding: '6px 8px',
-                  background: `${C.danger}33`,
-                  border: `1px solid ${C.danger}40`,
-                  borderRadius: 7,
-                  color: C.danger,
-                  fontSize: 11,
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  fontFamily: 'inherit',
-                }}
-              >
-                ✕
-              </button>
-            </div>
-          </div>
-        )}
       </div>
       {/* Title */}
       <p
@@ -575,6 +624,48 @@ function LibraryCard({ entry, onEdit, onDelete }: { entry: MediaEntry; onEdit: (
         Progress: {entry.progress}
         {entry.totalProgress ? `/${entry.totalProgress}` : ''}
       </p>
+      {/* Action Buttons - Always Visible (prevents double-edit bug & mobile visibility issue) */}
+      <div style={{ display: 'flex', gap: 6, marginTop: 8 }} onClick={(e) => e.stopPropagation()}>
+        <button
+          onClick={onEdit}
+          style={{
+            flex: 1,
+            padding: '6px 0',
+            background: `${C.accent}15`,
+            border: `1px solid ${C.accent}40`,
+            borderRadius: 8,
+            color: C.accent,
+            fontSize: 11,
+            fontWeight: 700,
+            cursor: 'pointer',
+            fontFamily: 'inherit',
+            transition: 'background 0.2s',
+          }}
+          onMouseEnter={(e) => e.currentTarget.style.background = `${C.accent}30`}
+          onMouseLeave={(e) => e.currentTarget.style.background = `${C.accent}15`}
+        >
+          Edit
+        </button>
+        <button
+          onClick={onDelete}
+          style={{
+            padding: '6px 12px',
+            background: `${C.danger}15`,
+            border: `1px solid ${C.danger}40`,
+            borderRadius: 8,
+            color: C.danger,
+            fontSize: 11,
+            fontWeight: 700,
+            cursor: 'pointer',
+            fontFamily: 'inherit',
+            transition: 'background 0.2s',
+          }}
+          onMouseEnter={(e) => e.currentTarget.style.background = `${C.danger}30`}
+          onMouseLeave={(e) => e.currentTarget.style.background = `${C.danger}15`}
+        >
+          ✕
+        </button>
+      </div>
     </div>
   );
 }

@@ -77,6 +77,7 @@ export function SpotlightHero({ items, onAdd }: SpotlightHeroProps) {
         return (
           <div
             key={media.id}
+            onClick={() => navigate(`/anime/${media.id}`)}
             style={{
               position: 'absolute',
               inset: 0,
@@ -84,14 +85,17 @@ export function SpotlightHero({ items, onAdd }: SpotlightHeroProps) {
               pointerEvents: isActive ? 'auto' : 'none',
               transition: 'opacity 0.8s ease-in-out',
               zIndex: isActive ? 1 : 0,
+              cursor: 'pointer',
             }}
           >
             {/* Background Image Container */}
             <div
+              onClick={() => navigate(`/anime/${media.id}`)}
               style={{
                 position: 'absolute',
                 inset: 0,
                 overflow: 'hidden',
+                cursor: 'pointer',
               }}
             >
               <img
@@ -112,23 +116,28 @@ export function SpotlightHero({ items, onAdd }: SpotlightHeroProps) {
 
             {/* Gradient Overlay for Text Readability & Edge Blending */}
             <div
+              onClick={() => navigate(`/anime/${media.id}`)}
               style={{
                 position: 'absolute',
                 inset: 0,
                 background: 'linear-gradient(90deg, #0B1020 0%, rgba(11, 16, 32, 0.94) 30%, rgba(11, 16, 32, 0.7) 60%, rgba(11, 16, 32, 0.25) 80%, transparent 100%)',
+                cursor: 'pointer',
               }}
             />
             <div
+              onClick={() => navigate(`/anime/${media.id}`)}
               style={{
                 position: 'absolute',
                 inset: 0,
                 background: 'linear-gradient(to top, #0B1020 0%, rgba(11, 16, 32, 0.4) 40%, transparent 100%)',
+                cursor: 'pointer',
               }}
             />
 
             {/* Elegant Portrait Cover Image Card (Shown on the right side if banner is a fallback cover) */}
             {!hasBanner && isActive && (
               <div
+                onClick={() => navigate(`/anime/${media.id}`)}
                 style={{
                   position: 'absolute',
                   right: 80,
@@ -142,6 +151,7 @@ export function SpotlightHero({ items, onAdd }: SpotlightHeroProps) {
                   border: `1px solid ${C.accent}50`,
                   animation: 'fadeInRight 0.8s ease-out',
                   zIndex: 2,
+                  cursor: 'pointer',
                 }}
               >
                 <img
@@ -154,6 +164,7 @@ export function SpotlightHero({ items, onAdd }: SpotlightHeroProps) {
 
             {/* Content Container */}
             <div
+              onClick={() => navigate(`/anime/${media.id}`)}
               style={{
                 position: 'relative',
                 height: '100%',
@@ -163,6 +174,7 @@ export function SpotlightHero({ items, onAdd }: SpotlightHeroProps) {
                 padding: '0 48px',
                 maxWidth: 620,
                 zIndex: 2,
+                cursor: 'pointer',
               }}
             >
               {/* Spotlight Rank & Genre Tags */}
@@ -314,7 +326,10 @@ export function SpotlightHero({ items, onAdd }: SpotlightHeroProps) {
               {/* Action Buttons */}
               <div style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
                 <button
-                  onClick={() => navigate(`/anime/${media.id}`)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    navigate(`/anime/${media.id}`);
+                  }}
                   style={{
                     display: 'inline-flex',
                     alignItems: 'center',
@@ -348,7 +363,10 @@ export function SpotlightHero({ items, onAdd }: SpotlightHeroProps) {
                 </button>
 
                 <button
-                  onClick={() => onAdd(media)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onAdd(media);
+                  }}
                   style={{
                     display: 'inline-flex',
                     alignItems: 'center',
@@ -399,8 +417,12 @@ export function SpotlightHero({ items, onAdd }: SpotlightHeroProps) {
           }}
         >
           {/* Arrow Prev */}
+          {/* Arrow Prev */}
           <button
-            onClick={handlePrev}
+            onClick={(e) => {
+              e.stopPropagation();
+              handlePrev();
+            }}
             style={{
               width: 36,
               height: 36,
@@ -432,7 +454,10 @@ export function SpotlightHero({ items, onAdd }: SpotlightHeroProps) {
 
           {/* Arrow Next */}
           <button
-            onClick={handleNext}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleNext();
+            }}
             style={{
               width: 36,
               height: 36,
@@ -480,7 +505,10 @@ export function SpotlightHero({ items, onAdd }: SpotlightHeroProps) {
           {items.map((_, idx) => (
             <button
               key={idx}
-              onClick={() => setActiveIndex(idx)}
+              onClick={(e) => {
+                e.stopPropagation();
+                setActiveIndex(idx);
+              }}
               style={{
                 width: idx === activeIndex ? 20 : 6,
                 height: 6,

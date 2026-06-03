@@ -34,6 +34,7 @@ export default function Sidebar({ setSidebarOpen, isMobile = false }: SidebarPro
   const { pathname, search } = useLocation();
   const { user, logout } = useAuth();
   const current = pathname + search;
+  const [mangaExpanded, setMangaExpanded] = useState(true);
 
   return (
     <aside style={{
@@ -99,15 +100,83 @@ export default function Sidebar({ setSidebarOpen, isMobile = false }: SidebarPro
       {/* Main nav */}
       <nav style={{ padding: '10px 8px 0' }}>
         {NAV.map((item) => {
-          const active = item.path === '/'
+          const isAnime = item.path === '/anime';
+          const isManga = item.path === '/manga';
+          const isHome = item.path === '/';
+          const isDiscover = item.path === '/search';
+
+          const active = isHome
             ? pathname === '/'
-            : item.path === '/anime'
-              ? pathname.startsWith('/anime') || current === '/search?type=ANIME'
-              : item.path === '/manga'
-                ? pathname.startsWith('/manga') || current === '/search?type=MANGA'
-                : item.path === '/search'
-                  ? pathname === '/search' && searchParamsIsDiscover(search)
+            : isAnime
+              ? pathname.startsWith('/anime') || (pathname === '/search' && current.includes('type=ANIME'))
+              : isManga
+                ? pathname.startsWith('/manga') || (pathname === '/search' && (current.includes('type=MANGA') || current.includes('type=MANHWA') || current.includes('type=MANHUA')))
+                : isDiscover
+                  ? pathname === '/search' && !current.includes('type=')
                   : pathname.startsWith(item.path);
+
+          if (isManga) {
+            return (
+              <div key={item.label} style={{ display: 'flex', flexDirection: 'column' }}>
+                <NavRow
+                  item={item}
+                  active={active}
+                  onClick={() => {
+                    navigate(item.path);
+                    if (isMobile) setSidebarOpen(false);
+                  }}
+                  suffix={
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setMangaExpanded(!mangaExpanded);
+                      }}
+                      style={{
+                        background: 'transparent',
+                        border: 'none',
+                        color: C.muted,
+                        cursor: 'pointer',
+                        padding: '4px 6px',
+                        fontSize: 10,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        outline: 'none',
+                        transition: 'transform 0.2s',
+                        transform: mangaExpanded ? 'rotate(0deg)' : 'rotate(-90deg)',
+                      }}
+                    >
+                      ▼
+                    </button>
+                  }
+                />
+                {/* Indented sub-items under Manga */}
+                {mangaExpanded && (
+                  <div style={{ display: 'flex', flexDirection: 'column', paddingLeft: 16, marginTop: 2, marginBottom: 4 }}>
+                    {[
+                      { icon: '📖', label: 'All Manga', path: '/search?type=MANGA' },
+                      { icon: '🇰🇷', label: 'Manhwa', path: '/search?type=MANHWA' },
+                      { icon: '🇨🇳', label: 'Manhua', path: '/search?type=MANHUA' },
+                    ].map((sub) => {
+                      const subActive = current.includes(sub.path);
+                      return (
+                        <NavRowSub
+                          key={sub.label}
+                          item={sub}
+                          active={subActive}
+                          onClick={() => {
+                            navigate(sub.path);
+                            if (isMobile) setSidebarOpen(false);
+                          }}
+                        />
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          }
+
           return (
             <NavRow
               key={item.label}
@@ -214,12 +283,18 @@ export default function Sidebar({ setSidebarOpen, isMobile = false }: SidebarPro
   );
 }
 
-function searchParamsIsDiscover(search: string) {
-  const params = new URLSearchParams(search);
-  return !params.has('type');
-}
 
-function NavRow({ item, active, onClick }: { item: { icon: string; label: string }; active: boolean; onClick: () => void }) {
+function NavRow({
+  item,
+  active,
+  onClick,
+  suffix
+}: {
+  item: { icon: string; label: string };
+  active: boolean;
+  onClick: () => void;
+  suffix?: React.ReactNode;
+}) {
   const [hov, setHov] = useState(false);
   return (
     <div onClick={onClick}
@@ -228,10 +303,35 @@ function NavRow({ item, active, onClick }: { item: { icon: string; label: string
         display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px',
         borderRadius: 10, cursor: 'pointer', marginBottom: 2,
         background: active ? `${C.accent}22` : hov ? `${C.accent}0F` : 'transparent',
-        borderLeft: `3px solid ${active ? C.accent : 'transparent'}`, transition: 'all 0.15s'
+        borderLeft: `3px solid ${active ? C.accent : 'transparent'}`, transition: 'all 0.15s',
+        position: 'relative'
       }}>
       <span style={{ fontSize: 15 }}>{item.icon}</span>
       <span style={{ fontSize: 13, fontWeight: active ? 600 : 400, color: active ? C.text : C.muted }}>
+        {item.label}
+      </span>
+      {suffix && (
+        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center' }}>
+          {suffix}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function NavRowSub({ item, active, onClick }: { item: { icon: string; label: string }; active: boolean; onClick: () => void }) {
+  const [hov, setHov] = useState(false);
+  return (
+    <div onClick={onClick}
+      onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
+      style={{
+        display: 'flex', alignItems: 'center', gap: 8, padding: '5px 8px',
+        borderRadius: 8, cursor: 'pointer', marginBottom: 2,
+        background: active ? `${C.accent}15` : hov ? `${C.accent}0A` : 'transparent',
+        transition: 'all 0.15s'
+      }}>
+      <span style={{ fontSize: 12 }}>{item.icon}</span>
+      <span style={{ fontSize: 11.5, fontWeight: active ? 600 : 500, color: active ? C.text : C.muted }}>
         {item.label}
       </span>
     </div>

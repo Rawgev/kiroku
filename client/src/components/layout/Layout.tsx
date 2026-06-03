@@ -18,6 +18,22 @@ function TopNav({ sidebarOpen, setSidebarOpen, isMobile }: TopNavProps) {
   const [notifOpen, setNotifOpen] = useState(false);
   const [avatarMenuOpen, setAvatarMenuOpen] = useState(false);
   const [submenuActive, setSubmenuActive] = useState(false);
+  const [mangaNavDropdownOpen, setMangaNavDropdownOpen] = useState(false);
+  const mangaNavTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleMangaNavMouseEnter = () => {
+    if (mangaNavTimeoutRef.current) {
+      clearTimeout(mangaNavTimeoutRef.current);
+      mangaNavTimeoutRef.current = null;
+    }
+    setMangaNavDropdownOpen(true);
+  };
+
+  const handleMangaNavMouseLeave = () => {
+    mangaNavTimeoutRef.current = setTimeout(() => {
+      setMangaNavDropdownOpen(false);
+    }, 250);
+  };
 
   // Auto-complete suggestions state
   const [suggestions, setSuggestions] = useState<AniListMedia[]>([]);
@@ -130,6 +146,7 @@ function TopNav({ sidebarOpen, setSidebarOpen, isMobile }: TopNavProps) {
         setSubmenuActive(false);
         setNotifOpen(false);
         setSuggestions([]);
+        setMangaNavDropdownOpen(false);
       }
     }
     window.addEventListener('keydown', handleKeyDown);
@@ -183,7 +200,7 @@ function TopNav({ sidebarOpen, setSidebarOpen, isMobile }: TopNavProps) {
     {
       label: 'Anime',
       path: '/anime',
-      active: pathname.startsWith('/anime') || pathname + search === '/search?type=ANIME',
+      active: pathname.startsWith('/anime') || (pathname === '/search' && search.includes('type=ANIME')),
       icon: (
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
           <rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect>
@@ -200,7 +217,7 @@ function TopNav({ sidebarOpen, setSidebarOpen, isMobile }: TopNavProps) {
     {
       label: 'Manga',
       path: '/manga',
-      active: pathname.startsWith('/manga') || pathname + search === '/search?type=MANGA',
+      active: pathname.startsWith('/manga') || (pathname === '/search' && (search.includes('type=MANGA') || search.includes('type=MANHWA') || search.includes('type=MANHUA'))),
       icon: (
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
           <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
@@ -457,31 +474,128 @@ function TopNav({ sidebarOpen, setSidebarOpen, isMobile }: TopNavProps) {
             animation: 'fadeIn 0.2s ease-out',
           }}
         >
-          {navItems.map((item) => (
-            <button
-              key={item.label}
-              onClick={() => navigate(item.path)}
-              className="nav-btn"
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 6,
-                padding: '6px 12px',
-                borderRadius: 12,
-                border: item.active ? `1px solid ${C.accent}40` : '1px solid transparent',
-                background: item.active ? `${C.accent}20` : 'transparent',
-                color: item.active ? '#FFF' : C.muted,
-                fontSize: 12,
-                fontWeight: item.active ? 700 : 600,
-                cursor: 'pointer',
-                fontFamily: 'inherit',
-                outline: 'none',
-              }}
-            >
-              {item.icon}
-              {item.label}
-            </button>
-          ))}
+          {navItems.map((item) => {
+            if (item.label === 'Manga') {
+              return (
+                <div
+                  key={item.label}
+                  onMouseEnter={handleMangaNavMouseEnter}
+                  onMouseLeave={handleMangaNavMouseLeave}
+                  style={{ position: 'relative' }}
+                >
+                  <button
+                    onClick={() => navigate(item.path)}
+                    className="nav-btn"
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      padding: '6px 12px',
+                      borderRadius: 12,
+                      border: item.active ? `1px solid ${C.accent}40` : '1px solid transparent',
+                      background: item.active ? `${C.accent}20` : 'transparent',
+                      color: item.active ? '#FFF' : C.muted,
+                      fontSize: 12,
+                      fontWeight: item.active ? 700 : 600,
+                      cursor: 'pointer',
+                      fontFamily: 'inherit',
+                      outline: 'none',
+                    }}
+                  >
+                    {item.icon}
+                    {item.label} ▾
+                  </button>
+                  {mangaNavDropdownOpen && (
+                    <div
+                      style={{
+                        position: 'absolute',
+                        top: '100%',
+                        left: 0,
+                        width: 140,
+                        background: 'rgba(20, 26, 47, 0.96)',
+                        backdropFilter: 'blur(16px)',
+                        border: `1px solid ${C.border}`,
+                        borderRadius: 12,
+                        boxShadow: '0 8px 32px rgba(0,0,0,0.5), 0 0 1px rgba(139,92,246,0.3)',
+                        padding: '6px 0',
+                        zIndex: 220,
+                        marginTop: 6,
+                        animation: 'fadeIn 0.15s ease-out',
+                        display: 'flex',
+                        flexDirection: 'column',
+                      }}
+                    >
+                      {[
+                        { label: '📖 All Manga', path: '/search?type=MANGA' },
+                        { label: '🇰🇷 Manhwa', path: '/search?type=MANHWA' },
+                        { label: '🇨🇳 Manhua', path: '/search?type=MANHUA' },
+                      ].map((subItem) => (
+                        <button
+                          key={subItem.label}
+                          onClick={() => {
+                            navigate(subItem.path);
+                            if (mangaNavTimeoutRef.current) {
+                              clearTimeout(mangaNavTimeoutRef.current);
+                              mangaNavTimeoutRef.current = null;
+                            }
+                            setMangaNavDropdownOpen(false);
+                          }}
+                          style={{
+                            padding: '8px 12px',
+                            background: 'transparent',
+                            border: 'none',
+                            color: C.text,
+                            fontSize: 11,
+                            fontWeight: 600,
+                            textAlign: 'left',
+                            cursor: 'pointer',
+                            fontFamily: 'inherit',
+                            transition: 'background 0.2s, color 0.2s',
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.background = `${C.accent}20`;
+                            e.currentTarget.style.color = '#FFF';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.background = 'transparent';
+                            e.currentTarget.style.color = C.text;
+                          }}
+                        >
+                          {subItem.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            }
+
+            return (
+              <button
+                key={item.label}
+                onClick={() => navigate(item.path)}
+                className="nav-btn"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  padding: '6px 12px',
+                  borderRadius: 12,
+                  border: item.active ? `1px solid ${C.accent}40` : '1px solid transparent',
+                  background: item.active ? `${C.accent}20` : 'transparent',
+                  color: item.active ? '#FFF' : C.muted,
+                  fontSize: 12,
+                  fontWeight: item.active ? 700 : 600,
+                  cursor: 'pointer',
+                  fontFamily: 'inherit',
+                  outline: 'none',
+                }}
+              >
+                {item.icon}
+                {item.label}
+              </button>
+            );
+          })}
 
           {/* Random Anime/Manga Selector Button */}
           <button

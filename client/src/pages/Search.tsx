@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { searchMedia, fetchGenres } from '../api/anilist';
 import { AnimeCard, SkeletonCard, Spinner } from '../components/ui';
@@ -24,8 +24,25 @@ export default function Search() {
   const [hasMore,  setHasMore]  = useState(false);
   const [total,    setTotal]    = useState(0);
 
+  const [searchMangaDropdownOpen, setSearchMangaDropdownOpen] = useState(false);
+  const searchMangaTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleSearchMangaMouseEnter = () => {
+    if (searchMangaTimeoutRef.current) {
+      clearTimeout(searchMangaTimeoutRef.current);
+      searchMangaTimeoutRef.current = null;
+    }
+    setSearchMangaDropdownOpen(true);
+  };
+
+  const handleSearchMangaMouseLeave = () => {
+    searchMangaTimeoutRef.current = setTimeout(() => {
+      setSearchMangaDropdownOpen(false);
+    }, 250);
+  };
+
   const q      = searchParams.get('q')      || '';
-  const type   = (searchParams.get('type')  || 'ANIME') as 'ANIME' | 'MANGA';
+  const type   = (searchParams.get('type')  || 'ANIME') as 'ANIME' | 'MANGA' | 'MANHWA' | 'MANHUA';
   const genre  = searchParams.get('genre')  || '';
   const sort   = searchParams.get('sort')   || 'POPULARITY_DESC';
   const format = searchParams.get('format') || '';
@@ -37,7 +54,18 @@ export default function Search() {
   const doSearch = useCallback(async (p = 1) => {
     setLoading(true);
     try {
-      const { search } = await searchMedia({ query: q || undefined, type, genre: genre || undefined, sort, format: format || undefined, page: p, perPage: 24 });
+      const apiType = type === 'ANIME' ? 'ANIME' : 'MANGA';
+      const countryOfOrigin = type === 'MANHWA' ? 'KR' : type === 'MANHUA' ? 'CN' : undefined;
+      const { search } = await searchMedia({
+        query: q || undefined,
+        type: apiType,
+        genre: genre || undefined,
+        sort,
+        format: format || undefined,
+        page: p,
+        perPage: 24,
+        countryOfOrigin,
+      });
       if (p === 1) setResults(search.media);
       else         setResults((prev) => [...prev, ...search.media]);
       setHasMore(search.pageInfo.hasNextPage);
@@ -63,15 +91,125 @@ export default function Search() {
         padding: '14px 18px', marginBottom: 22, display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
 
         {/* Type toggle */}
-        <div style={{ display: 'flex', background: C.bg2, borderRadius: 8, overflow: 'hidden' }}>
-          {(['ANIME','MANGA'] as const).map((t) => (
-            <button key={t} onClick={() => set('type', t)}
-              style={{ padding: '7px 16px', border: 'none', cursor: 'pointer', fontFamily: 'inherit',
-                fontSize: 12, fontWeight: 600, background: type === t ? C.accent : 'transparent',
-                color: type === t ? '#fff' : C.muted }}>
-              {t}
+        <div style={{ display: 'flex', background: C.bg2, borderRadius: 8, overflow: 'visible', position: 'relative' }}>
+          <button
+            onClick={() => {
+              set('type', 'ANIME');
+              if (searchMangaTimeoutRef.current) {
+                clearTimeout(searchMangaTimeoutRef.current);
+                searchMangaTimeoutRef.current = null;
+              }
+              setSearchMangaDropdownOpen(false);
+            }}
+            style={{
+              padding: '7px 16px',
+              border: 'none',
+              cursor: 'pointer',
+              fontFamily: 'inherit',
+              fontSize: 12,
+              fontWeight: 600,
+              borderRadius: '8px 0 0 8px',
+              background: type === 'ANIME' ? C.accent : 'transparent',
+              color: type === 'ANIME' ? '#fff' : C.muted,
+              transition: 'background 0.2s, color 0.2s',
+            }}
+          >
+            ANIME
+          </button>
+
+          <div
+            onMouseEnter={handleSearchMangaMouseEnter}
+            onMouseLeave={handleSearchMangaMouseLeave}
+            style={{ position: 'relative', display: 'flex' }}
+          >
+            <button
+              onClick={() => {
+                if (type === 'ANIME') {
+                  set('type', 'MANGA');
+                }
+                setSearchMangaDropdownOpen(!searchMangaDropdownOpen);
+              }}
+              style={{
+                padding: '7px 16px',
+                border: 'none',
+                cursor: 'pointer',
+                fontFamily: 'inherit',
+                fontSize: 12,
+                fontWeight: 600,
+                borderRadius: '0 8px 8px 0',
+                background: type !== 'ANIME' ? C.accent : 'transparent',
+                color: type !== 'ANIME' ? '#fff' : C.muted,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 4,
+                transition: 'background 0.2s, color 0.2s',
+              }}
+            >
+              {type === 'MANHWA' ? 'MANHWA' : type === 'MANHUA' ? 'MANHUA' : 'MANGA'} ▾
             </button>
-          ))}
+
+            {searchMangaDropdownOpen && (
+              <div
+                style={{
+                  position: 'absolute',
+                  top: '100%',
+                  right: 0,
+                  width: 130,
+                  background: 'rgba(20, 26, 47, 0.96)',
+                  backdropFilter: 'blur(16px)',
+                  border: `1px solid ${C.border}`,
+                  borderRadius: 10,
+                  boxShadow: '0 8px 24px rgba(0, 0, 0, 0.5)',
+                  padding: '5px 0',
+                  zIndex: 220,
+                  marginTop: 4,
+                  animation: 'fadeIn 0.15s ease-out',
+                  display: 'flex',
+                  flexDirection: 'column',
+                }}
+              >
+                {[
+                  { label: '📖 All Manga', val: 'MANGA' },
+                  { label: '🇰🇷 Manhwa', val: 'MANHWA' },
+                  { label: '🇨🇳 Manhua', val: 'MANHUA' },
+                ].map((opt) => (
+                  <button
+                    key={opt.val}
+                    onClick={() => {
+                      set('type', opt.val);
+                      if (searchMangaTimeoutRef.current) {
+                        clearTimeout(searchMangaTimeoutRef.current);
+                        searchMangaTimeoutRef.current = null;
+                      }
+                      setSearchMangaDropdownOpen(false);
+                    }}
+                    style={{
+                      padding: '8px 12px',
+                      background: 'transparent',
+                      border: 'none',
+                      color: type === opt.val ? C.accentLight : C.text,
+                      fontSize: 11.5,
+                      fontWeight: 600,
+                      textAlign: 'left',
+                      cursor: 'pointer',
+                      fontFamily: 'inherit',
+                      transition: 'background 0.2s, color 0.2s',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = `${C.accent}20`;
+                      e.currentTarget.style.color = '#FFF';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = 'transparent';
+                      e.currentTarget.style.color = type === opt.val ? C.accentLight : C.text;
+                    }}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Genre select */}

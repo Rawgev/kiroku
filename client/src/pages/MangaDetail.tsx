@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { fetchMediaDetail } from '../api/anilist';
 import { searchMangaDex, getMangaChapters, getMangaDexReadUrl, getMangaDexTitleUrl } from '../api/mangadex';
-import { addToLibrary, getLibrary, getReviews, createReview, updateEntry } from '../api/backend';
+import { addToLibrary, getLibrary, getReviews, createReview, updateEntry, deleteReview, likeReview } from '../api/backend';
 import { useAuth } from '../context/AuthContext';
 import { Modal, StarRating, Spinner } from '../components/ui';
 import { C, STATUS_LABELS, btnPrimaryStyle } from '../constants/colors';
@@ -42,6 +42,39 @@ export default function MangaDetail() {
   const [revBody,        setRevBody]        = useState('');
   const [revRating,      setRevRating]      = useState(0);
   const [revSaving,      setRevSaving]      = useState(false);
+
+  // Floating emojis and reaction handlers
+  const [floatingEmojis, setFloatingEmojis] = useState<{ id: number; char: string; x: number; y: number; reviewId: string }[]>([]);
+
+  const spawnEmoji = (char: string, reviewId: string, e: React.MouseEvent) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const newEmoji = { id: Date.now() + Math.random(), char, x, y, reviewId };
+    setFloatingEmojis((prev) => [...prev, newEmoji]);
+    setTimeout(() => {
+      setFloatingEmojis((prev) => prev.filter((item) => item.id !== newEmoji.id));
+    }, 1000);
+  };
+
+  const handleLike = async (id: string) => {
+    if (!user) { navigate('/login'); return; }
+    const res = await likeReview(id).catch(() => null);
+    if (res) {
+      setReviews((prev) => prev.map((r) => r._id === id ? { ...r, likesCount: res.likesCount } : r));
+    }
+  };
+
+  const handleDeleteReview = async (id: string) => {
+    if (!window.confirm('Are you sure you want to delete this review?')) return;
+    try {
+      await deleteReview(id);
+      setReviews((prev) => prev.filter((r) => r._id !== id));
+      alert('Review deleted.');
+    } catch {
+      alert('Failed to delete review.');
+    }
+  };
 
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   useEffect(() => {
@@ -304,9 +337,24 @@ export default function MangaDetail() {
               <p style={{ color: C.muted }}>No reviews yet. Be the first!</p>
             </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12, position: 'relative' }}>
+              <style>{`
+                @keyframes floatUp {
+                  0% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+                  100% { transform: translate(-50%, -80px) scale(1.5); opacity: 0; }
+                }
+              `}</style>
               {reviews.map((r: any) => (
-                <div key={r._id} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: 16 }}>
+                <div key={r._id} style={{ position: 'relative', background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: 16 }}>
+                  {/* Floating emojis inside this review */}
+                  {floatingEmojis.filter((fe) => fe.reviewId === r._id).map((fe) => (
+                    <span key={fe.id} style={{
+                      position: 'absolute', left: fe.x, top: fe.y,
+                      fontSize: 24, pointerEvents: 'none',
+                      animation: 'floatUp 0.8s forwards ease-out', zIndex: 10
+                    }}>{fe.char}</span>
+                  ))}
+                  
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
                     <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
                       <div style={{ width: 34, height: 34, borderRadius: '50%',
@@ -325,6 +373,42 @@ export default function MangaDetail() {
                   </div>
                   <h4 style={{ fontSize: 13, fontWeight: 700, color: C.text, margin: '0 0 6px' }}>{r.title}</h4>
                   <p style={{ fontSize: 12, color: C.muted, lineHeight: 1.65, margin: 0 }}>{r.body}</p>
+
+                  {/* Reactions row and Delete button */}
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 12, flexWrap: 'wrap' }}>
+                    {(['👍', '❤️', '🔥', '😮', '🖕', '👎', '🤬', '🤡'] as const).map((emoji) => (
+                      <button key={emoji}
+                        onClick={(e) => {
+                          spawnEmoji(emoji, r._id, e);
+                          handleLike(r._id);
+                        }}
+                        style={{
+                          padding: '4px 10px', background: 'rgba(255,255,255,0.03)', border: `1px solid ${C.border}`,
+                          borderRadius: 8, color: C.text, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit',
+                          display: 'flex', alignItems: 'center', gap: 4, transition: 'all 0.15s'
+                        }}
+                        onMouseEnter={(ev) => {
+                          ev.currentTarget.style.background = `${C.accent}15`;
+                          ev.currentTarget.style.borderColor = C.accent;
+                        }}
+                        onMouseLeave={(ev) => {
+                          ev.currentTarget.style.background = 'rgba(255,255,255,0.03)';
+                          ev.currentTarget.style.borderColor = C.border;
+                        }}>
+                        {emoji} {emoji === '👍' ? r.likesCount : ''}
+                      </button>
+                    ))}
+                    
+                    {user && (r.userId?._id === user._id || r.userId === user._id || (typeof r.userId === 'object' && r.userId?.username === user.username)) && (
+                      <button onClick={() => handleDeleteReview(r._id)}
+                        style={{
+                          marginLeft: 'auto', padding: '4px 10px', background: `${C.danger}15`, border: `1px solid ${C.danger}40`,
+                          borderRadius: 8, color: C.danger, fontSize: 11, cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600
+                        }}>
+                        🗑️ Delete
+                      </button>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>

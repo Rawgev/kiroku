@@ -154,7 +154,7 @@ export function StarRating({ value, onChange }: { value: number; onChange?: (v: 
         <span key={n}
           onMouseEnter={() => setHov(n)}
           onMouseLeave={() => setHov(0)}
-          onClick={() => onChange?.(n)}
+          onClick={() => onChange?.(n === value ? 0 : n)}
           style={{ fontSize: 18, cursor: onChange ? 'pointer' : 'default',
             color: n <= (hov || value) ? C.warning : C.card,
             transition: 'color 0.1s' }}>★</span>

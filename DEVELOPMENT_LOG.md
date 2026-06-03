@@ -110,3 +110,35 @@ This log tracks all architectural changes, feature implementations, and bug fixe
     *   [Sidebar.tsx](file:///c:/padhai/projects/otakuvault/client/src/components/layout/Sidebar.tsx)
     *   [App.tsx](file:///c:/padhai/projects/otakuvault/client/src/App.tsx)
     *   [Search.tsx](file:///c:/padhai/projects/otakuvault/client/src/pages/Search.tsx)
+
+---
+
+### 11. Manga, Manhwa, and Manhua Dropdowns & Sidebar Collapse
+*   **API Filter Mapping**: Integrated the `countryOfOrigin` string parameter into the client's search params and updated the AniList GraphQL query variables to support filtering by country code (`KR` for Manhwa, `CN` for Manhua).
+*   **Dropdown Header & Search Filters**: Implemented hoverable, glassmorphic dropdown menus in the Top Navigation bar and the Search type toggle. The Manga button dynamically updates its label to match the active type (e.g. `MANGA ▾`, `MANHWA ▾`, `MANHUA ▾`).
+*   **Debounced Hover State**: Added a 250ms delay timeout buffer on mouse leave events to ensure smooth mouse transitions across spacing gaps without causing the dropdowns to flicker or close prematurely.
+*   **Collapsible Sidebar Sub-links**: Nested "All Manga", "Manhwa", and "Manhua" sub-links directly inside the sidebar. Added a chevron toggle button (`▼`/`▶`) next to the parent "Manga" option to let users collapse or expand the list of sub-links.
+*   **File Changes**:
+    *   [anilist.ts](file:///c:/padhai/projects/kiroku/client/src/api/anilist.ts)
+    *   [Layout.tsx](file:///c:/padhai/projects/kiroku/client/src/components/layout/Layout.tsx)
+    *   [Sidebar.tsx](file:///c:/padhai/projects/kiroku/client/src/components/layout/Sidebar.tsx)
+    *   [Search.tsx](file:///c:/padhai/projects/kiroku/client/src/pages/Search.tsx)
+
+---
+
+### 12. Spotlight, Star Rating, Reviews, and Card Fixes
+*   **Spotlight Click/Tap Navigation**: Made the entire SpotlightHero banner slides clickable to navigate to the media details page, while keeping watch now, add to list, next/prev arrow buttons, and slide dots interactive without triggering navigation.
+*   **Star Rating Reset**: Allowed unchecking star ratings back to 0 (unscored) when clicking the active rating value in the StarRating component.
+*   **Card Layouts & Double-Edit Hover Fixes**:
+    *   **LibraryCard**: Moved action buttons (Edit, Delete) below the progress info on grid cards, making them always visible. This completely bypasses the hover state locking bug when edit modal overlay is closed, allowing double edits without a page refresh.
+    *   **KanbanCard**: Made action buttons visible on hover or automatically visible on phone viewports.
+*   **Write/Edit Reviews from Library**: Added a "Your Review" section directly inside the Library Edit Modal, dynamically loading/updating/deleting the user's review for that media.
+*   **Delete Reviews Option**: Added a delete button on review cards across detail, profile, and community feed pages, allowing users to remove their reviews with confirmation.
+*   **Interactive Reaction Emojis**: Rendered interactive reaction buttons (👍, ❤️, 🔥, 😮) for each review, which trigger backend likes and spawn premium floating emoji animations rising from the clicked screen coordinates.
+*   **File Changes**:
+    *   [SpotlightHero.tsx](file:///c:/padhai/projects/kiroku/client/src/components/ui/SpotlightHero.tsx)
+    *   [index.tsx](file:///c:/padhai/projects/kiroku/client/src/components/ui/index.tsx)
+    *   [Library.tsx](file:///c:/padhai/projects/kiroku/client/src/pages/Library.tsx)
+    *   [AnimeDetail.tsx](file:///c:/padhai/projects/kiroku/client/src/pages/AnimeDetail.tsx)
+    *   [MangaDetail.tsx](file:///c:/padhai/projects/kiroku/client/src/pages/MangaDetail.tsx)
+    *   [Pages.tsx](file:///c:/padhai/projects/kiroku/client/src/pages/Pages.tsx)

@@ -103,12 +103,14 @@ export interface SearchParams {
   sort?:   string;
   page?:   number;
   perPage?: number;
+  countryOfOrigin?: string;
 }
 
 export async function searchMedia(params: SearchParams): Promise<{ search: AniListPage }> {
   const {
     query, type, genre, year, format,
     sort = 'POPULARITY_DESC', page = 1, perPage = 20,
+    countryOfOrigin,
   } = params;
 
   // 1. Start with the guaranteed base variables
@@ -124,13 +126,14 @@ export async function searchMedia(params: SearchParams): Promise<{ search: AniLi
   if (genre)          variables.genre = genre;
   if (year)           variables.year = year;
   if (format)         variables.format = format;
+  if (countryOfOrigin) variables.countryOfOrigin = countryOfOrigin;
 
   // 3. Fire the query with the perfectly stripped variables object
   return gql(
-    `query($search:String,$type:MediaType,$genre:String,$year:Int,$format:MediaFormat,$sort:[MediaSort],$page:Int,$perPage:Int){
+    `query($search:String,$type:MediaType,$genre:String,$year:Int,$format:MediaFormat,$sort:[MediaSort],$page:Int,$perPage:Int,$countryOfOrigin:CountryCode){
       search: Page(page:$page, perPage:$perPage){
         pageInfo { total currentPage lastPage hasNextPage }
-        media(search:$search, type:$type, genre:$genre, seasonYear:$year, format:$format, sort:$sort, isAdult:false){
+        media(search:$search, type:$type, genre:$genre, seasonYear:$year, format:$format, sort:$sort, countryOfOrigin:$countryOfOrigin, isAdult:false){
           ${CARD_FIELDS}
         }
       }

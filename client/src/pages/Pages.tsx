@@ -31,6 +31,39 @@ export function Profile() {
   const [editBody, setEditBody] = useState('');
   const [editRating, setEditRating] = useState(10);
   const [editSaving, setEditSaving] = useState(false);
+  // Floating emojis and reaction handlers
+  const [floatingEmojis, setFloatingEmojis] = useState<{ id: number; char: string; x: number; y: number; reviewId: string }[]>([]);
+
+  const spawnEmoji = (char: string, reviewId: string, e: React.MouseEvent) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const newEmoji = { id: Date.now() + Math.random(), char, x, y, reviewId };
+    setFloatingEmojis((prev) => [...prev, newEmoji]);
+    setTimeout(() => {
+      setFloatingEmojis((prev) => prev.filter((item) => item.id !== newEmoji.id));
+    }, 1000);
+  };
+
+  const handleLike = async (id: string) => {
+    const { likeReview } = await import('../api/backend');
+    const res = await likeReview(id).catch(() => null);
+    if (res) {
+      setReviews((prev) => prev.map((r) => r._id === id ? { ...r, likesCount: res.likesCount } : r));
+    }
+  };
+
+  const handleDeleteReview = async (id: string) => {
+    if (!window.confirm('Are you sure you want to delete this review?')) return;
+    try {
+      const { deleteReview } = await import('../api/backend');
+      await deleteReview(id);
+      setReviews((prev) => prev.filter((r) => r._id !== id));
+      alert('Review deleted.');
+    } catch {
+      alert('Failed to delete review.');
+    }
+  };
 
   const isOwn = me?.username === username;
 
@@ -198,26 +231,74 @@ export function Profile() {
       )}
 
       {tab === 'reviews' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, position: 'relative' }}>
+          <style>{`
+            @keyframes floatUpProfile {
+              0% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+              100% { transform: translate(-50%, -80px) scale(1.5); opacity: 0; }
+            }
+          `}</style>
           {reviews.map((r) => (
-            <div key={r._id} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: 16 }}>
+            <div key={r._id} style={{ position: 'relative', background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: 16 }}>
+              {/* Floating emojis inside this review */}
+              {floatingEmojis.filter((fe) => fe.reviewId === r._id).map((fe) => (
+                <span key={fe.id} style={{
+                  position: 'absolute', left: fe.x, top: fe.y,
+                  fontSize: 24, pointerEvents: 'none',
+                  animation: 'floatUpProfile 0.8s forwards ease-out', zIndex: 10
+                }}>{fe.char}</span>
+              ))}
+
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
                 <span style={{ fontSize: 14, fontWeight: 700, color: C.text }}>{r.mediaTitle}</span>
                 <span style={{ fontSize: 13, color: C.warning }}>⭐ {r.rating}/10</span>
               </div>
               <h4 style={{ fontSize: 13, fontWeight: 700, color: C.accentLight, margin: '0 0 6px' }}>{r.title}</h4>
               <p style={{ fontSize: 12, color: C.muted, lineHeight: 1.6, margin: 0 }}>{r.body.slice(0, 200)}…</p>
-              {isOwn && (
-                <div style={{ marginTop: 10, display: 'flex', justifyContent: 'flex-end' }}>
-                  <button onClick={() => openEditModal(r)}
+
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 12, flexWrap: 'wrap' }}>
+                {(['👍', '❤️', '🔥', '😮', '🖕', '👎', '🤬', '🤡',] as const).map((emoji) => (
+                  <button key={emoji}
+                    onClick={(e) => {
+                      spawnEmoji(emoji, r._id, e);
+                      handleLike(r._id);
+                    }}
                     style={{
-                      padding: '5px 12px', background: 'rgba(255, 255, 255, 0.05)', border: `1px solid ${C.border}`,
-                      borderRadius: 7, color: C.accentLight, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit'
+                      padding: '4px 10px', background: 'rgba(255,255,255,0.03)', border: `1px solid ${C.border}`,
+                      borderRadius: 8, color: C.text, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit',
+                      display: 'flex', alignItems: 'center', gap: 4, transition: 'all 0.15s'
+                    }}
+                    onMouseEnter={(ev) => {
+                      ev.currentTarget.style.background = `${C.accent}15`;
+                      ev.currentTarget.style.borderColor = C.accent;
+                    }}
+                    onMouseLeave={(ev) => {
+                      ev.currentTarget.style.background = 'rgba(255,255,255,0.03)';
+                      ev.currentTarget.style.borderColor = C.border;
                     }}>
-                    ✏️ Edit
+                    {emoji} {emoji === '👍' ? r.likesCount : ''}
                   </button>
-                </div>
-              )}
+                ))}
+
+                {isOwn && (
+                  <div style={{ marginLeft: 'auto', display: 'flex', gap: 6 }}>
+                    <button onClick={() => openEditModal(r)}
+                      style={{
+                        padding: '4px 12px', background: 'rgba(255, 255, 255, 0.05)', border: `1px solid ${C.border}`,
+                        borderRadius: 7, color: C.accentLight, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit'
+                      }}>
+                      ✏️ Edit
+                    </button>
+                    <button onClick={() => handleDeleteReview(r._id)}
+                      style={{
+                        padding: '4px 12px', background: `${C.danger}15`, border: `1px solid ${C.danger}40`,
+                        borderRadius: 7, color: C.danger, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600
+                      }}>
+                      🗑️ Delete
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           ))}
           {reviews.length === 0 && <p style={{ color: C.muted }}>No reviews yet.</p>}
@@ -300,6 +381,32 @@ export function Community() {
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Floating emojis and reaction handlers
+  const [floatingEmojis, setFloatingEmojis] = useState<{ id: number; char: string; x: number; y: number; reviewId: string }[]>([]);
+
+  const spawnEmoji = (char: string, reviewId: string, e: React.MouseEvent) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const newEmoji = { id: Date.now() + Math.random(), char, x, y, reviewId };
+    setFloatingEmojis((prev) => [...prev, newEmoji]);
+    setTimeout(() => {
+      setFloatingEmojis((prev) => prev.filter((item) => item.id !== newEmoji.id));
+    }, 1000);
+  };
+
+  const handleDeleteReview = async (id: string) => {
+    if (!window.confirm('Are you sure you want to delete this review?')) return;
+    try {
+      const { deleteReview } = await import('../api/backend');
+      await deleteReview(id);
+      setReviews((prev) => prev.filter((r) => r._id !== id));
+      alert('Review deleted.');
+    } catch {
+      alert('Failed to delete review.');
+    }
+  };
+
   // Review editing states & filter states
   const [filter, setFilter] = useState<'all' | 'my'>('all');
   const [editModalOpen, setEditModalOpen] = useState(false);
@@ -361,7 +468,7 @@ export function Community() {
   return (
     <div style={{ maxWidth: 760 }}>
       <h1 style={{ fontSize: 22, fontWeight: 800, color: C.text, margin: '0 0 22px' }}>💬 Community</h1>
-      
+
       {/* My Reviews vs All Reviews filter toggle */}
       {user && (
         <div style={{ display: 'flex', gap: 8, marginBottom: 18 }}>
@@ -387,11 +494,26 @@ export function Community() {
       )}
 
       {loading ? <Spinner /> : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16, position: 'relative' }}>
+          <style>{`
+            @keyframes floatUpComm {
+              0% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+              100% { transform: translate(-50%, -80px) scale(1.5); opacity: 0; }
+            }
+          `}</style>
           {displayedReviews.map((r) => {
             const isOwnReview = user && (r.userId?._id === user._id || r.userId?.username === user.username);
             return (
-              <div key={r._id} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, padding: 18 }}>
+              <div key={r._id} style={{ position: 'relative', background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, padding: 18 }}>
+                {/* Floating emojis inside this review */}
+                {floatingEmojis.filter((fe) => fe.reviewId === r._id).map((fe) => (
+                  <span key={fe.id} style={{
+                    position: 'absolute', left: fe.x, top: fe.y,
+                    fontSize: 24, pointerEvents: 'none',
+                    animation: 'floatUpComm 0.8s forwards ease-out', zIndex: 10
+                  }}>{fe.char}</span>
+                ))}
+
                 <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 12 }}>
                   <div style={{
                     width: 38, height: 38, borderRadius: '50%',
@@ -413,22 +535,47 @@ export function Community() {
                 <p style={{ fontSize: 13, color: C.muted, lineHeight: 1.65, margin: '0 0 12px' }}>
                   {r.body.slice(0, 280)}{r.body.length > 280 ? '…' : ''}
                 </p>
-                <div style={{ display: 'flex', gap: 10 }}>
-                  <button onClick={() => handleLike(r._id)}
-                    style={{
-                      padding: '5px 12px', background: `${C.accent}15`, border: `1px solid ${C.accent}30`,
-                      borderRadius: 7, color: C.accent, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit'
-                    }}>
-                    👍 {r.likesCount}
-                  </button>
-                  {isOwnReview && (
-                    <button onClick={() => openEditModal(r)}
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                  {(['👍', '❤️', '🔥', '😮'] as const).map((emoji) => (
+                    <button key={emoji}
+                      onClick={(e) => {
+                        spawnEmoji(emoji, r._id, e);
+                        handleLike(r._id);
+                      }}
                       style={{
-                        padding: '5px 12px', background: 'rgba(255, 255, 255, 0.05)', border: `1px solid ${C.border}`,
-                        borderRadius: 7, color: C.accentLight, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit'
+                        padding: '5px 12px', background: 'rgba(255,255,255,0.03)', border: `1px solid ${C.border}`,
+                        borderRadius: 8, color: C.text, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit',
+                        display: 'flex', alignItems: 'center', gap: 4, transition: 'all 0.15s'
+                      }}
+                      onMouseEnter={(ev) => {
+                        ev.currentTarget.style.background = `${C.accent}15`;
+                        ev.currentTarget.style.borderColor = C.accent;
+                      }}
+                      onMouseLeave={(ev) => {
+                        ev.currentTarget.style.background = 'rgba(255,255,255,0.03)';
+                        ev.currentTarget.style.borderColor = C.border;
                       }}>
-                      ✏️ Edit
+                      {emoji} {emoji === '👍' ? r.likesCount : ''}
                     </button>
+                  ))}
+
+                  {isOwnReview && (
+                    <div style={{ marginLeft: 'auto', display: 'flex', gap: 6 }}>
+                      <button onClick={() => openEditModal(r)}
+                        style={{
+                          padding: '5px 12px', background: 'rgba(255, 255, 255, 0.05)', border: `1px solid ${C.border}`,
+                          borderRadius: 7, color: C.accentLight, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit'
+                        }}>
+                        ✏️ Edit
+                      </button>
+                      <button onClick={() => handleDeleteReview(r._id)}
+                        style={{
+                          padding: '5px 12px', background: `${C.danger}15`, border: `1px solid ${C.danger}40`,
+                          borderRadius: 7, color: C.danger, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600
+                        }}>
+                        🗑️ Delete
+                      </button>
+                    </div>
                   )}
                 </div>
               </div>
@@ -484,7 +631,7 @@ export function WatchPartyPage() {
   const [modal, setModal] = useState(false);
   const [name, setName] = useState('');
   const [season, setSeason] = useState('Spring 2026');
-  const [saving,  setSaving]  = useState(false);
+  const [saving, setSaving] = useState(false);
   const [deletingPartyId, setDeletingPartyId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -624,13 +771,17 @@ export function WatchPartyPage() {
           </p>
           <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 8 }}>
             <button onClick={() => setDeletingPartyId(null)}
-              style={{ padding: '8px 16px', background: 'transparent', border: `1px solid ${C.border}`,
-                borderRadius: 9, color: C.muted, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+              style={{
+                padding: '8px 16px', background: 'transparent', border: `1px solid ${C.border}`,
+                borderRadius: 9, color: C.muted, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit'
+              }}>
               Cancel
             </button>
             <button onClick={handleConfirmDelete}
-              style={{ padding: '8px 16px', background: C.danger, border: 'none',
-                borderRadius: 9, color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+              style={{
+                padding: '8px 16px', background: C.danger, border: 'none',
+                borderRadius: 9, color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit'
+              }}>
               Confirm
             </button>
           </div>
@@ -973,13 +1124,17 @@ export function Admin() {
           </p>
           <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 8 }}>
             <button onClick={() => setDeletingUserId(null)}
-              style={{ padding: '8px 16px', background: 'transparent', border: `1px solid ${C.border}`,
-                borderRadius: 9, color: C.muted, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+              style={{
+                padding: '8px 16px', background: 'transparent', border: `1px solid ${C.border}`,
+                borderRadius: 9, color: C.muted, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit'
+              }}>
               Cancel
             </button>
             <button onClick={handleConfirmDeleteUser}
-              style={{ padding: '8px 16px', background: C.danger, border: 'none',
-                borderRadius: 9, color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+              style={{
+                padding: '8px 16px', background: C.danger, border: 'none',
+                borderRadius: 9, color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit'
+              }}>
               Confirm
             </button>
           </div>
