@@ -118,6 +118,74 @@ export function Modal({ open, onClose, title, children, width = 480 }: ModalProp
 }
 
 // ── SectionHeader ──────────────────────────────────────────
+interface ConfirmDeleteModalProps {
+  open: boolean;
+  title?: string;
+  message: string;
+  detail?: string;
+  confirmLabel?: string;
+  cancelLabel?: string;
+  loading?: boolean;
+  onCancel: () => void;
+  onConfirm: () => void;
+}
+
+export function ConfirmDeleteModal({
+  open,
+  title = 'Delete this?',
+  message,
+  detail = 'This action cannot be undone.',
+  confirmLabel = 'Delete',
+  cancelLabel = 'Cancel',
+  loading = false,
+  onCancel,
+  onConfirm,
+}: ConfirmDeleteModalProps) {
+  return (
+    <Modal open={open} onClose={loading ? () => {} : onCancel} title={title} width={420}>
+      <div style={{ display: 'flex', gap: 14, alignItems: 'flex-start' }}>
+        <div style={{
+          width: 42, height: 42, borderRadius: 12, flexShrink: 0,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          background: `${C.danger}18`, border: `1px solid ${C.danger}35`,
+          color: C.danger, fontSize: 22, fontWeight: 800
+        }}>
+          !
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <p style={{ fontSize: 14, color: C.text, margin: 0, lineHeight: 1.55, fontWeight: 650 }}>
+            {message}
+          </p>
+          <p style={{ fontSize: 12, color: C.muted, margin: '7px 0 0', lineHeight: 1.55 }}>
+            {detail}
+          </p>
+        </div>
+      </div>
+      <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 24, flexWrap: 'wrap' }}>
+        <button onClick={onCancel} disabled={loading}
+          style={{
+            padding: '9px 16px', background: 'transparent', border: `1px solid ${C.border}`,
+            borderRadius: 10, color: C.muted, fontSize: 12, fontWeight: 700,
+            cursor: loading ? 'not-allowed' : 'pointer', fontFamily: 'inherit',
+            opacity: loading ? 0.6 : 1
+          }}>
+          {cancelLabel}
+        </button>
+        <button onClick={onConfirm} disabled={loading}
+          style={{
+            padding: '9px 18px', background: C.danger, border: 'none',
+            borderRadius: 10, color: '#fff', fontSize: 12, fontWeight: 800,
+            cursor: loading ? 'not-allowed' : 'pointer', fontFamily: 'inherit',
+            boxShadow: `0 10px 24px ${C.danger}30`,
+            opacity: loading ? 0.7 : 1
+          }}>
+          {loading ? 'Deleting...' : confirmLabel}
+        </button>
+      </div>
+    </Modal>
+  );
+}
+
 export function SectionHeader({ title, subtitle, onViewAll }: { title: string; subtitle?: string; onViewAll?: () => void }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>

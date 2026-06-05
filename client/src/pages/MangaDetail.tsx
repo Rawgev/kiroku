@@ -4,7 +4,7 @@ import { fetchMediaDetail } from '../api/anilist';
 import { searchMangaDex, getMangaChapters, getMangaDexReadUrl, getMangaDexTitleUrl } from '../api/mangadex';
 import { addToLibrary, getLibrary, getReviews, createReview, updateEntry, deleteReview } from '../api/backend';
 import { useAuth } from '../context/AuthContext';
-import { Modal, StarRating, Spinner } from '../components/ui';
+import { ConfirmDeleteModal, Modal, StarRating, Spinner } from '../components/ui';
 import { C, STATUS_LABELS, btnPrimaryStyle } from '../constants/colors';
 import type { AniListMedia, WatchStatus, MediaEntry, Review } from '../types';
 import type { MDManga, MDChapter } from '../api/mangadex';
@@ -42,6 +42,8 @@ export default function MangaDetail() {
   const [revBody,        setRevBody]        = useState('');
   const [revRating,      setRevRating]      = useState(0);
   const [revSaving,      setRevSaving]      = useState(false);
+  const [deletingReviewId, setDeletingReviewId] = useState<string | null>(null);
+  const [deleteReviewSaving, setDeleteReviewSaving] = useState(false);
 
   // Floating emojis and reaction handlers
   const [floatingEmojis, setFloatingEmojis] = useState<{ id: number; char: string; x: number; y: number; reviewId: string }[]>([]);
@@ -86,14 +88,21 @@ export default function MangaDetail() {
     }
   };
 
-  const handleDeleteReview = async (id: string) => {
-    if (!window.confirm('Are you sure you want to delete this review?')) return;
+  const handleDeleteReview = (id: string) => {
+    setDeletingReviewId(id);
+  };
+
+  const handleConfirmDeleteReview = async () => {
+    if (!deletingReviewId) return;
+    setDeleteReviewSaving(true);
     try {
-      await deleteReview(id);
-      setReviews((prev) => prev.filter((r) => r._id !== id));
-      alert('Review deleted.');
+      await deleteReview(deletingReviewId);
+      setReviews((prev) => prev.filter((r) => r._id !== deletingReviewId));
+      setDeletingReviewId(null);
     } catch {
       alert('Failed to delete review.');
+    } finally {
+      setDeleteReviewSaving(false);
     }
   };
 
@@ -560,6 +569,17 @@ export default function MangaDetail() {
           </button>
         </div>
       </Modal>
+
+      <ConfirmDeleteModal
+        open={!!deletingReviewId}
+        title="Delete Review?"
+        message="Are you sure you want to delete this review?"
+        detail="Your rating, title, and review text will be permanently removed."
+        confirmLabel="Delete Review"
+        loading={deleteReviewSaving}
+        onCancel={() => setDeletingReviewId(null)}
+        onConfirm={handleConfirmDeleteReview}
+      />
 
       <Modal open={modal} onClose={() => setModal(false)} title={entry ? 'Edit Library Entry' : 'Add to Library'}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>

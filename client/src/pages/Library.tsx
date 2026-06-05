@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { getLibrary, updateEntry, deleteEntry, getReviews, createReview, updateReview, deleteReview } from '../api/backend';
 import { useAuth } from '../context/AuthContext';
-import { Modal, StatusBadge, StarRating, Spinner } from '../components/ui';
+import { ConfirmDeleteModal, Modal, StatusBadge, StarRating, Spinner } from '../components/ui';
 import { C, STATUS_COLORS, STATUS_LABELS, inputStyle } from '../constants/colors';
 import type { MediaEntry, WatchStatus } from '../types';
 
@@ -38,6 +38,8 @@ export default function Library() {
   const [revBody, setRevBody] = useState('');
   const [userReview, setUserReview] = useState<any | null>(null);
   const [reviewsLoading, setReviewsLoading] = useState(false);
+  const [deleteReviewOpen, setDeleteReviewOpen] = useState(false);
+  const [deleteReviewSaving, setDeleteReviewSaving] = useState(false);
 
   // Local filter states
   const [selectedType, setSelectedType] = useState<'ALL' | 'ANIME' | 'MANGA'>('ALL');
@@ -125,17 +127,24 @@ export default function Library() {
     finally { setSaving(false); }
   };
 
-  const handleDeleteReview = async () => {
+  const handleDeleteReview = () => {
     if (!userReview) return;
-    if (!window.confirm('Are you sure you want to delete your review?')) return;
+    setDeleteReviewOpen(true);
+  };
+
+  const handleConfirmDeleteReview = async () => {
+    if (!userReview) return;
+    setDeleteReviewSaving(true);
     try {
       await deleteReview(userReview._id);
       setUserReview(null);
       setRevTitle('');
       setRevBody('');
-      alert('Review deleted.');
+      setDeleteReviewOpen(false);
     } catch {
       alert('Failed to delete review.');
+    } finally {
+      setDeleteReviewSaving(false);
     }
   };
 
@@ -488,6 +497,17 @@ export default function Library() {
           </div>
         </div>
       </Modal>
+
+      <ConfirmDeleteModal
+        open={deleteReviewOpen}
+        title="Delete Review?"
+        message="Are you sure you want to delete your review?"
+        detail="This removes only the review. Your library entry will stay intact."
+        confirmLabel="Delete Review"
+        loading={deleteReviewSaving}
+        onCancel={() => setDeleteReviewOpen(false)}
+        onConfirm={handleConfirmDeleteReview}
+      />
     </div>
   );
 }

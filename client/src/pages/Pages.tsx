@@ -5,7 +5,7 @@ import { useEffect, useState, FormEvent } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getPublicProfile, getUserLibrary, getReviews, updateProfile } from '../api/backend';
 import { useAuth } from '../context/AuthContext';
-import { StatusBadge, Modal, Spinner } from '../components/ui';
+import { ConfirmDeleteModal, StatusBadge, Modal, Spinner } from '../components/ui';
 import { C, inputStyle, btnPrimaryStyle } from '../constants/colors';
 import type { User, MediaEntry, Review } from '../types';
 
@@ -31,6 +31,8 @@ export function Profile() {
   const [editBody, setEditBody] = useState('');
   const [editRating, setEditRating] = useState(10);
   const [editSaving, setEditSaving] = useState(false);
+  const [deletingReviewId, setDeletingReviewId] = useState<string | null>(null);
+  const [deleteReviewSaving, setDeleteReviewSaving] = useState(false);
   // Floating emojis and reaction handlers
   const [floatingEmojis, setFloatingEmojis] = useState<{ id: number; char: string; x: number; y: number; reviewId: string }[]>([]);
 
@@ -74,15 +76,22 @@ export function Profile() {
     }
   };
 
-  const handleDeleteReview = async (id: string) => {
-    if (!window.confirm('Are you sure you want to delete this review?')) return;
+  const handleDeleteReview = (id: string) => {
+    setDeletingReviewId(id);
+  };
+
+  const handleConfirmDeleteReview = async () => {
+    if (!deletingReviewId) return;
+    setDeleteReviewSaving(true);
     try {
       const { deleteReview } = await import('../api/backend');
-      await deleteReview(id);
-      setReviews((prev) => prev.filter((r) => r._id !== id));
-      alert('Review deleted.');
+      await deleteReview(deletingReviewId);
+      setReviews((prev) => prev.filter((r) => r._id !== deletingReviewId));
+      setDeletingReviewId(null);
     } catch {
       alert('Failed to delete review.');
+    } finally {
+      setDeleteReviewSaving(false);
     }
   };
 
@@ -483,6 +492,17 @@ export function Profile() {
           </button>
         </div>
       </Modal>
+
+      <ConfirmDeleteModal
+        open={!!deletingReviewId}
+        title="Delete Review?"
+        message="Are you sure you want to delete this review?"
+        detail="Your rating, title, and review text will be permanently removed."
+        confirmLabel="Delete Review"
+        loading={deleteReviewSaving}
+        onCancel={() => setDeletingReviewId(null)}
+        onConfirm={handleConfirmDeleteReview}
+      />
     </div>
   );
 }
@@ -510,15 +530,22 @@ export function Community() {
     }, 1000);
   };
 
-  const handleDeleteReview = async (id: string) => {
-    if (!window.confirm('Are you sure you want to delete this review?')) return;
+  const handleDeleteReview = (id: string) => {
+    setDeletingReviewId(id);
+  };
+
+  const handleConfirmDeleteReview = async () => {
+    if (!deletingReviewId) return;
+    setDeleteReviewSaving(true);
     try {
       const { deleteReview } = await import('../api/backend');
-      await deleteReview(id);
-      setReviews((prev) => prev.filter((r) => r._id !== id));
-      alert('Review deleted.');
+      await deleteReview(deletingReviewId);
+      setReviews((prev) => prev.filter((r) => r._id !== deletingReviewId));
+      setDeletingReviewId(null);
     } catch {
       alert('Failed to delete review.');
+    } finally {
+      setDeleteReviewSaving(false);
     }
   };
 
@@ -530,6 +557,8 @@ export function Community() {
   const [editBody, setEditBody] = useState('');
   const [editRating, setEditRating] = useState(10);
   const [editSaving, setEditSaving] = useState(false);
+  const [deletingReviewId, setDeletingReviewId] = useState<string | null>(null);
+  const [deleteReviewSaving, setDeleteReviewSaving] = useState(false);
 
   useEffect(() => {
     getReviews({ page: 1 }).then((d) => setReviews(d.reviews || [])).catch(console.error).finally(() => setLoading(false));
@@ -846,6 +875,17 @@ export function Community() {
           </button>
         </div>
       </Modal>
+
+      <ConfirmDeleteModal
+        open={!!deletingReviewId}
+        title="Delete Review?"
+        message="Are you sure you want to delete this review?"
+        detail="Your rating, title, and review text will be permanently removed."
+        confirmLabel="Delete Review"
+        loading={deleteReviewSaving}
+        onCancel={() => setDeletingReviewId(null)}
+        onConfirm={handleConfirmDeleteReview}
+      />
     </div>
   );
 }
