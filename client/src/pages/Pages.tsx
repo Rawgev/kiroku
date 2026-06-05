@@ -45,11 +45,32 @@ export function Profile() {
     }, 1000);
   };
 
-  const handleLike = async (id: string) => {
-    const { likeReview } = await import('../api/backend');
-    const res = await likeReview(id).catch(() => null);
-    if (res) {
-      setReviews((prev) => prev.map((r) => r._id === id ? { ...r, likesCount: res.likesCount } : r));
+  const handleVote = async (id: string, direction: 'up' | 'down') => {
+    if (!me) { navigate('/login'); return; }
+    const { voteReview } = await import('../api/backend');
+    const updated = await voteReview(id, direction).catch(() => null);
+    if (updated) {
+      setReviews((prev) => prev.map((r) => r._id === id ? {
+        ...r,
+        upvotes: updated.upvotes,
+        downvotes: updated.downvotes,
+        score: updated.score,
+        likesCount: updated.likesCount
+      } : r));
+    }
+  };
+
+  const handleReact = async (id: string, emoji: 'heart' | 'fire' | 'zany') => {
+    if (!me) { navigate('/login'); return; }
+    const { reactReview } = await import('../api/backend');
+    const updated = await reactReview(id, emoji).catch(() => null);
+    if (updated) {
+      setReviews((prev) => prev.map((r) => r._id === id ? {
+        ...r,
+        reactionHeart: updated.reactionHeart,
+        reactionFire: updated.reactionFire,
+        reactionZany: updated.reactionZany
+      } : r));
     }
   };
 
@@ -239,7 +260,7 @@ export function Profile() {
             }
           `}</style>
           {reviews.map((r) => (
-            <div key={r._id} style={{ position: 'relative', background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: 16 }}>
+            <div key={r._id} style={{ position: 'relative', background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, padding: 18 }}>
               {/* Floating emojis inside this review */}
               {floatingEmojis.filter((fe) => fe.reviewId === r._id).map((fe) => (
                 <span key={fe.id} style={{
@@ -249,55 +270,108 @@ export function Profile() {
                 }}>{fe.char}</span>
               ))}
 
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-                <span style={{ fontSize: 14, fontWeight: 700, color: C.text }}>{r.mediaTitle}</span>
-                <span style={{ fontSize: 13, color: C.warning }}>⭐ {r.rating}/10</span>
-              </div>
-              <h4 style={{ fontSize: 13, fontWeight: 700, color: C.accentLight, margin: '0 0 6px' }}>{r.title}</h4>
-              <p style={{ fontSize: 12, color: C.muted, lineHeight: 1.6, margin: 0 }}>{r.body.slice(0, 200)}…</p>
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, alignItems: 'center' }}>
+                  <span style={{ fontSize: 14, fontWeight: 700, color: C.text }}>{r.mediaTitle}</span>
+                  <span style={{ fontSize: 13, color: C.warning, fontWeight: 700 }}>⭐ {r.rating}/10</span>
+                </div>
+                <h4 style={{ fontSize: 13, fontWeight: 700, color: C.accentLight, margin: '0 0 6px' }}>{r.title}</h4>
+                <p style={{ fontSize: 12, color: C.muted, lineHeight: 1.6, margin: '0 0 16px' }}>{r.body.slice(0, 200)}…</p>
 
-              <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 12, flexWrap: 'wrap' }}>
-                {(['👍', '❤️', '🔥', '😮', '🖕', '👎', '🤬', '🤡',] as const).map((emoji) => (
-                  <button key={emoji}
-                    onClick={(e) => {
-                      spawnEmoji(emoji, r._id, e);
-                      handleLike(r._id);
-                    }}
-                    style={{
-                      padding: '4px 10px', background: 'rgba(255,255,255,0.03)', border: `1px solid ${C.border}`,
-                      borderRadius: 8, color: C.text, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit',
-                      display: 'flex', alignItems: 'center', gap: 4, transition: 'all 0.15s'
-                    }}
-                    onMouseEnter={(ev) => {
-                      ev.currentTarget.style.background = `${C.accent}15`;
-                      ev.currentTarget.style.borderColor = C.accent;
-                    }}
-                    onMouseLeave={(ev) => {
-                      ev.currentTarget.style.background = 'rgba(255,255,255,0.03)';
-                      ev.currentTarget.style.borderColor = C.border;
-                    }}>
-                    {emoji} {emoji === '👍' ? r.likesCount : ''}
-                  </button>
-                ))}
-
-                {isOwn && (
-                  <div style={{ marginLeft: 'auto', display: 'flex', gap: 6 }}>
-                    <button onClick={() => openEditModal(r)}
+                <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap', marginTop: 14 }}>
+                  {/* Reddit-style Vote Pill */}
+                  <div style={{
+                    display: 'flex', alignItems: 'center', background: 'rgba(255,255,255,0.03)',
+                    border: `1px solid ${C.border}`, borderRadius: 20, padding: '3px 8px', gap: 8
+                  }}>
+                    <button 
+                      onClick={() => handleVote(r._id, 'up')}
                       style={{
-                        padding: '4px 12px', background: 'rgba(255, 255, 255, 0.05)', border: `1px solid ${C.border}`,
-                        borderRadius: 7, color: C.accentLight, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit'
-                      }}>
-                      ✏️ Edit
+                        background: 'none', border: 'none', color: me && r.upvotes?.includes(me._id) ? '#FF4500' : C.muted,
+                        fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        padding: '2px 4px', transition: 'transform 0.15s', outline: 'none'
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.2)'}
+                      onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                    >
+                      ▲
                     </button>
-                    <button onClick={() => handleDeleteReview(r._id)}
+                    <span style={{ 
+                      fontSize: 12, fontWeight: 800, minWidth: 16, textAlign: 'center',
+                      color: me && r.upvotes?.includes(me._id) ? '#FF4500' : (me && r.downvotes?.includes(me._id) ? '#5A73F3' : C.text)
+                    }}>
+                      {r.score ?? 0}
+                    </span>
+                    <button 
+                      onClick={() => handleVote(r._id, 'down')}
                       style={{
-                        padding: '4px 12px', background: `${C.danger}15`, border: `1px solid ${C.danger}40`,
-                        borderRadius: 7, color: C.danger, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600
-                      }}>
-                      🗑️ Delete
+                        background: 'none', border: 'none', color: me && r.downvotes?.includes(me._id) ? '#5A73F3' : C.muted,
+                        fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        padding: '2px 4px', transition: 'transform 0.15s', outline: 'none'
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.2)'}
+                      onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                    >
+                      ▼
                     </button>
                   </div>
-                )}
+
+                  {/* Emoji Reaction buttons */}
+                  {[
+                    { emoji: '❤️', type: 'heart', list: r.reactionHeart },
+                    { emoji: '🔥', type: 'fire', list: r.reactionFire },
+                    { emoji: '🤪', type: 'zany', list: r.reactionZany }
+                  ].map(({ emoji, type, list }) => {
+                    const count = list?.length || 0;
+                    const hasReacted = me && list?.includes(me._id);
+                    return (
+                      <button key={type}
+                        onClick={(e) => {
+                          spawnEmoji(emoji, r._id, e);
+                          handleReact(r._id, type as 'heart' | 'fire' | 'zany');
+                        }}
+                        style={{
+                          padding: '5px 12px', background: hasReacted ? `${C.accent}20` : 'rgba(255,255,255,0.03)',
+                          border: `1px solid ${hasReacted ? C.accent : C.border}`,
+                          borderRadius: 20, color: hasReacted ? C.accentLight : C.text, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit',
+                          display: 'flex', alignItems: 'center', gap: 6, transition: 'all 0.15s'
+                        }}
+                        onMouseEnter={(ev) => {
+                          if (!hasReacted) {
+                            ev.currentTarget.style.background = `${C.accent}15`;
+                            ev.currentTarget.style.borderColor = C.accent;
+                          }
+                        }}
+                        onMouseLeave={(ev) => {
+                          if (!hasReacted) {
+                            ev.currentTarget.style.background = 'rgba(255,255,255,0.03)';
+                            ev.currentTarget.style.borderColor = C.border;
+                          }
+                        }}>
+                        {emoji} {count}
+                      </button>
+                    );
+                  })}
+
+                  {isOwn && (
+                    <div style={{ marginLeft: 'auto', display: 'flex', gap: 6 }}>
+                      <button onClick={() => openEditModal(r)}
+                        style={{
+                          padding: '4px 12px', background: 'rgba(255, 255, 255, 0.05)', border: `1px solid ${C.border}`,
+                          borderRadius: 7, color: C.accentLight, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit'
+                        }}>
+                        ✏️ Edit
+                      </button>
+                      <button onClick={() => handleDeleteReview(r._id)}
+                        style={{
+                          padding: '4px 12px', background: `${C.danger}15`, border: `1px solid ${C.danger}40`,
+                          borderRadius: 7, color: C.danger, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600
+                        }}>
+                        🗑️ Delete
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           ))}
@@ -454,11 +528,33 @@ export function Community() {
     }
   };
 
-  const handleLike = async (id: string) => {
+  const handleVote = async (id: string, direction: 'up' | 'down') => {
     if (!user) { navigate('/login'); return; }
-    const { likeReview } = await import('../api/backend');
-    const res = await likeReview(id).catch(() => null);
-    if (res) setReviews((prev) => prev.map((r) => r._id === id ? { ...r, likesCount: res.likesCount } : r));
+    const { voteReview } = await import('../api/backend');
+    const updated = await voteReview(id, direction).catch(() => null);
+    if (updated) {
+      setReviews((prev) => prev.map((r) => r._id === id ? {
+        ...r,
+        upvotes: updated.upvotes,
+        downvotes: updated.downvotes,
+        score: updated.score,
+        likesCount: updated.likesCount
+      } : r));
+    }
+  };
+
+  const handleReact = async (id: string, emoji: 'heart' | 'fire' | 'zany') => {
+    if (!user) { navigate('/login'); return; }
+    const { reactReview } = await import('../api/backend');
+    const updated = await reactReview(id, emoji).catch(() => null);
+    if (updated) {
+      setReviews((prev) => prev.map((r) => r._id === id ? {
+        ...r,
+        reactionHeart: updated.reactionHeart,
+        reactionFire: updated.reactionFire,
+        reactionZany: updated.reactionZany
+      } : r));
+    }
   };
 
   const displayedReviews = filter === 'my' && user
@@ -514,69 +610,124 @@ export function Community() {
                   }}>{fe.char}</span>
                 ))}
 
-                <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 12 }}>
-                  <div style={{
-                    width: 38, height: 38, borderRadius: '50%',
-                    background: `linear-gradient(135deg,${C.accent},#06b6d4)`,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0
-                  }}>
-                    {r.userId?.avatar
-                      ? <img src={r.userId.avatar} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
-                      : '🦊'}
+                <div>
+                  <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 12 }}>
+                    <div style={{
+                      width: 34, height: 34, borderRadius: '50%',
+                      background: `linear-gradient(135deg,${C.accent},#06b6d4)`,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, flexShrink: 0
+                    }}>
+                      {r.userId?.avatar
+                        ? <img src={r.userId.avatar} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
+                        : '🦊'}
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: C.accent }}>{r.userId?.username || 'User'}</span>
+                      <span style={{ fontSize: 12, color: C.muted }}> reviewed </span>
+                      <span style={{ fontSize: 13, fontWeight: 600, color: C.text }}>{r.mediaTitle}</span>
+                    </div>
+                    <span style={{ fontSize: 13, color: C.warning, fontWeight: 700 }}>⭐ {r.rating}/10</span>
                   </div>
-                  <div style={{ flex: 1 }}>
-                    <span style={{ fontSize: 13, fontWeight: 700, color: C.accent }}>{r.userId?.username || 'User'}</span>
-                    <span style={{ fontSize: 12, color: C.muted }}> reviewed </span>
-                    <span style={{ fontSize: 13, fontWeight: 600, color: C.text }}>{r.mediaTitle}</span>
-                  </div>
-                  <span style={{ fontSize: 13, color: C.warning }}>⭐ {r.rating}/10</span>
-                </div>
-                <h4 style={{ fontSize: 14, fontWeight: 700, color: C.text, margin: '0 0 8px' }}>{r.title}</h4>
-                <p style={{ fontSize: 13, color: C.muted, lineHeight: 1.65, margin: '0 0 12px' }}>
-                  {r.body.slice(0, 280)}{r.body.length > 280 ? '…' : ''}
-                </p>
-                <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-                  {(['👍', '❤️', '🔥', '😮'] as const).map((emoji) => (
-                    <button key={emoji}
-                      onClick={(e) => {
-                        spawnEmoji(emoji, r._id, e);
-                        handleLike(r._id);
-                      }}
-                      style={{
-                        padding: '5px 12px', background: 'rgba(255,255,255,0.03)', border: `1px solid ${C.border}`,
-                        borderRadius: 8, color: C.text, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit',
-                        display: 'flex', alignItems: 'center', gap: 4, transition: 'all 0.15s'
-                      }}
-                      onMouseEnter={(ev) => {
-                        ev.currentTarget.style.background = `${C.accent}15`;
-                        ev.currentTarget.style.borderColor = C.accent;
-                      }}
-                      onMouseLeave={(ev) => {
-                        ev.currentTarget.style.background = 'rgba(255,255,255,0.03)';
-                        ev.currentTarget.style.borderColor = C.border;
-                      }}>
-                      {emoji} {emoji === '👍' ? r.likesCount : ''}
-                    </button>
-                  ))}
-
-                  {isOwnReview && (
-                    <div style={{ marginLeft: 'auto', display: 'flex', gap: 6 }}>
-                      <button onClick={() => openEditModal(r)}
+                  <h4 style={{ fontSize: 14, fontWeight: 700, color: C.text, margin: '0 0 8px' }}>{r.title}</h4>
+                  <p style={{ fontSize: 13, color: C.muted, lineHeight: 1.65, margin: '0 0 16px' }}>
+                    {r.body.slice(0, 280)}{r.body.length > 280 ? '…' : ''}
+                  </p>
+                  
+                  {/* Reactions row and Admin buttons */}
+                  <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap', marginTop: 14 }}>
+                    {/* Reddit-style Vote Pill */}
+                    <div style={{
+                      display: 'flex', alignItems: 'center', background: 'rgba(255,255,255,0.03)',
+                      border: `1px solid ${C.border}`, borderRadius: 20, padding: '3px 8px', gap: 8
+                    }}>
+                      <button 
+                        onClick={() => handleVote(r._id, 'up')}
                         style={{
-                          padding: '5px 12px', background: 'rgba(255, 255, 255, 0.05)', border: `1px solid ${C.border}`,
-                          borderRadius: 7, color: C.accentLight, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit'
-                        }}>
-                        ✏️ Edit
+                          background: 'none', border: 'none', color: user && r.upvotes?.includes(user._id) ? '#FF4500' : C.muted,
+                          fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          padding: '2px 4px', transition: 'transform 0.15s', outline: 'none'
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.2)'}
+                        onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                      >
+                        ▲
                       </button>
-                      <button onClick={() => handleDeleteReview(r._id)}
+                      <span style={{ 
+                        fontSize: 12, fontWeight: 800, minWidth: 16, textAlign: 'center',
+                        color: user && r.upvotes?.includes(user._id) ? '#FF4500' : (user && r.downvotes?.includes(user._id) ? '#5A73F3' : C.text)
+                      }}>
+                        {r.score ?? 0}
+                      </span>
+                      <button 
+                        onClick={() => handleVote(r._id, 'down')}
                         style={{
-                          padding: '5px 12px', background: `${C.danger}15`, border: `1px solid ${C.danger}40`,
-                          borderRadius: 7, color: C.danger, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600
-                        }}>
-                        🗑️ Delete
+                          background: 'none', border: 'none', color: user && r.downvotes?.includes(user._id) ? '#5A73F3' : C.muted,
+                          fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          padding: '2px 4px', transition: 'transform 0.15s', outline: 'none'
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.2)'}
+                        onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                      >
+                        ▼
                       </button>
                     </div>
-                  )}
+
+                    {/* Emoji Reaction buttons */}
+                    {[
+                      { emoji: '❤️', type: 'heart', list: r.reactionHeart },
+                      { emoji: '🔥', type: 'fire', list: r.reactionFire },
+                      { emoji: '🤪', type: 'zany', list: r.reactionZany }
+                    ].map(({ emoji, type, list }) => {
+                      const count = list?.length || 0;
+                      const hasReacted = user && list?.includes(user._id);
+                      return (
+                        <button key={type}
+                          onClick={(e) => {
+                            spawnEmoji(emoji, r._id, e);
+                            handleReact(r._id, type as 'heart' | 'fire' | 'zany');
+                          }}
+                          style={{
+                            padding: '5px 12px', background: hasReacted ? `${C.accent}20` : 'rgba(255,255,255,0.03)',
+                            border: `1px solid ${hasReacted ? C.accent : C.border}`,
+                            borderRadius: 20, color: hasReacted ? C.accentLight : C.text, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit',
+                            display: 'flex', alignItems: 'center', gap: 6, transition: 'all 0.15s'
+                          }}
+                          onMouseEnter={(ev) => {
+                            if (!hasReacted) {
+                              ev.currentTarget.style.background = `${C.accent}15`;
+                              ev.currentTarget.style.borderColor = C.accent;
+                            }
+                          }}
+                          onMouseLeave={(ev) => {
+                            if (!hasReacted) {
+                              ev.currentTarget.style.background = 'rgba(255,255,255,0.03)';
+                              ev.currentTarget.style.borderColor = C.border;
+                            }
+                          }}>
+                          {emoji} {count}
+                        </button>
+                      );
+                    })}
+
+                    {isOwnReview && (
+                      <div style={{ marginLeft: 'auto', display: 'flex', gap: 6 }}>
+                        <button onClick={() => openEditModal(r)}
+                          style={{
+                            padding: '5px 12px', background: 'rgba(255, 255, 255, 0.05)', border: `1px solid ${C.border}`,
+                            borderRadius: 7, color: C.accentLight, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit'
+                          }}>
+                          ✏️ Edit
+                        </button>
+                        <button onClick={() => handleDeleteReview(r._id)}
+                          style={{
+                            padding: '5px 12px', background: `${C.danger}15`, border: `1px solid ${C.danger}40`,
+                            borderRadius: 7, color: C.danger, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600
+                          }}>
+                          🗑️ Delete
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             );

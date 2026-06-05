@@ -5,7 +5,7 @@ import { RadarChart, Radar, PolarGrid, PolarAngleAxis, PieChart, Pie, Cell,
 import { getLibraryStats } from '../api/backend';
 import { useAuth } from '../context/AuthContext';
 import { Spinner } from '../components/ui';
-import { C } from '../constants/colors';
+import { C, STATUS_COLORS } from '../constants/colors';
 import type { UserStats } from '../types';
 
 const COLORS = ['#8B5CF6','#10B981','#F59E0B','#EF4444','#3B82F6','#EC4899','#14B8A6','#F97316'];
@@ -80,11 +80,25 @@ export default function Stats() {
         <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, padding: 20 }}>
           <h3 style={{ fontSize: 15, fontWeight: 700, color: C.text, margin: '0 0 16px' }}>Library Status</h3>
           <ResponsiveContainer width="100%" height={200}>
-            <PieChart style={chartStyle}>
+            <PieChart style={chartStyle} margin={{ top: 12, bottom: 12, left: 16, right: 16 }}>
               <Pie data={statusData} dataKey="val" nameKey="name" cx="50%" cy="50%"
-                innerRadius={50} outerRadius={80} paddingAngle={3} label={({ name, percent }) =>
-                  `${name.replace('_',' ')} ${(percent * 100).toFixed(0)}%`} labelLine={false}>
-                {statusData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+                innerRadius={42} outerRadius={65} paddingAngle={3} labelLine={false}
+                label={({ cx, cy, midAngle, outerRadius: or, percent, name }) => {
+                  const RADIAN = Math.PI / 180;
+                  const radius = or + 12;
+                  const x = cx + radius * Math.cos(-midAngle * RADIAN);
+                  const y = cy + radius * Math.sin(-midAngle * RADIAN);
+                  const textAnchor = x > cx ? 'start' : 'end';
+                  const labelName = name.replace('_', ' ');
+                  return (
+                    <text x={x} y={y} fill={C.text} textAnchor={textAnchor} dominantBaseline="central" style={{ fontSize: 10, fontWeight: 700 }}>
+                      {`${labelName} ${(percent * 100).toFixed(0)}%`}
+                    </text>
+                  );
+                }}>
+                {statusData.map((entry, i) => (
+                  <Cell key={i} fill={STATUS_COLORS[entry.name] || COLORS[i % COLORS.length]} />
+                ))}
               </Pie>
               <Tooltip {...tooltip} />
             </PieChart>

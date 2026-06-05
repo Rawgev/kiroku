@@ -54,6 +54,12 @@ export const deleteReview = (id: string) => api.delete(`/reviews/${id}`);
 export const likeReview = (id: string) =>
   api.post<{ liked: boolean; likesCount: number }>(`/reviews/${id}/like`).then((r) => r.data);
 
+export const voteReview = (id: string, direction: 'up' | 'down') =>
+  api.post<{ review: Review }>(`/reviews/${id}/vote`, { direction }).then((r) => r.data.review);
+
+export const reactReview = (id: string, emoji: 'heart' | 'fire' | 'zany') =>
+  api.post<{ review: Review }>(`/reviews/${id}/react`, { emoji }).then((r) => r.data.review);
+
 // User
 export const getProfile = () => api.get<{ user: User }>('/users/profile').then((r) => r.data.user);
 

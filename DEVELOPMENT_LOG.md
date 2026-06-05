@@ -165,3 +165,23 @@ This log tracks all architectural changes, feature implementations, and bug fixe
 *   **File Changes**:
     *   [index.tsx](file:///c:/padhai/projects/kiroku/client/src/components/ui/index.tsx#L139-L146)
     *   [AnimeDetail.tsx](file:///c:/padhai/projects/kiroku/client/src/pages/AnimeDetail.tsx#L283-L291)
+
+---
+
+### 15. Reddit-Style Review Voting, Emoji Reactions, and Pie Chart Color Fix
+*   **Reddit-Style Voting**: Replaced the vertical layout with a horizontal layout at the bottom of the review card to match the user's sketch. Combined upvote, downvote, and score into a unified capsule pill `[ ▲ Score ▼ ]` with responsive highlight colors (orange for upvote, blue for downvote).
+*   **Emoji Reactions**: Integrated three emoji reaction buttons (`❤️`, `🔥`, `🤪`) in a capsule shape beside the vote pill. They show real-time counts, toggle off when clicked a second time, and trigger custom coordinates-based floating emoji animations.
+*   **Stats Pie Chart Fix**:
+    *   Mapped pie chart slices to use the application's semantic `STATUS_COLORS` (meaning the Completed slice renders in visible green `C.success` rather than the default purple).
+    *   Optimized Recharts labels to use high-contrast white text (`C.text`), scaled down the radius to prevent clipping, and added chart padding.
+*   **Backend & DB Synchronization**: Added schema fields (`upvotes`, `downvotes`, `score`, and three reaction lists) to track reactions, updated database scoring logic, and mapped legacy likes endpoint requests to upvotes for full backwards compatibility.
+*   **File Changes**:
+    *   [Review.ts](file:///c:/padhai/projects/kiroku/server/src/models/Review.ts)
+    *   [reviews.ts](file:///c:/padhai/projects/kiroku/server/src/routes/reviews.ts)
+    *   [index.ts](file:///c:/padhai/projects/kiroku/client/src/types/index.ts)
+    *   [backend.ts](file:///c:/padhai/projects/kiroku/client/src/api/backend.ts)
+    *   [Pages.tsx](file:///c:/padhai/projects/kiroku/client/src/pages/Pages.tsx)
+    *   [AnimeDetail.tsx](file:///c:/padhai/projects/kiroku/client/src/pages/AnimeDetail.tsx)
+    *   [MangaDetail.tsx](file:///c:/padhai/projects/kiroku/client/src/pages/MangaDetail.tsx)
+    *   [Stats.tsx](file:///c:/padhai/projects/kiroku/client/src/pages/Stats.tsx)
+

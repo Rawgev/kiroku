@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { fetchMediaDetail } from '../api/anilist';
-import { addToLibrary, getLibrary, getReviews, createReview, updateEntry, deleteReview, likeReview } from '../api/backend';
+import { addToLibrary, getLibrary, getReviews, createReview, updateEntry, deleteReview } from '../api/backend';
 import { useAuth } from '../context/AuthContext';
 import { AnimeCard, Modal, StarRating, Spinner } from '../components/ui';
 import { C, STATUS_LABELS, btnPrimaryStyle } from '../constants/colors';
@@ -52,11 +52,32 @@ export default function AnimeDetail() {
     }, 1000);
   };
 
-  const handleLike = async (id: string) => {
+  const handleVote = async (id: string, direction: 'up' | 'down') => {
     if (!user) { navigate('/login'); return; }
-    const res = await likeReview(id).catch(() => null);
-    if (res) {
-      setReviews((prev) => prev.map((r) => r._id === id ? { ...r, likesCount: res.likesCount } : r));
+    const { voteReview } = await import('../api/backend');
+    const updated = await voteReview(id, direction).catch(() => null);
+    if (updated) {
+      setReviews((prev) => prev.map((r) => r._id === id ? {
+        ...r,
+        upvotes: updated.upvotes,
+        downvotes: updated.downvotes,
+        score: updated.score,
+        likesCount: updated.likesCount
+      } : r));
+    }
+  };
+
+  const handleReact = async (id: string, emoji: 'heart' | 'fire' | 'zany') => {
+    if (!user) { navigate('/login'); return; }
+    const { reactReview } = await import('../api/backend');
+    const updated = await reactReview(id, emoji).catch(() => null);
+    if (updated) {
+      setReviews((prev) => prev.map((r) => r._id === id ? {
+        ...r,
+        reactionHeart: updated.reactionHeart,
+        reactionFire: updated.reactionFire,
+        reactionZany: updated.reactionZany
+      } : r));
     }
   };
 
@@ -361,7 +382,7 @@ export default function AnimeDetail() {
                 }
               `}</style>
               {reviews.map((r: any) => (
-                <div key={r._id} style={{ position: 'relative', background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: 16 }}>
+                <div key={r._id} style={{ position: 'relative', background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, padding: 18 }}>
                   {/* Floating emojis inside this review */}
                   {floatingEmojis.filter((fe) => fe.reviewId === r._id).map((fe) => (
                     <span key={fe.id} style={{
@@ -371,59 +392,112 @@ export default function AnimeDetail() {
                     }}>{fe.char}</span>
                   ))}
                   
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
-                    <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-                      <div style={{ width: 34, height: 34, borderRadius: '50%',
-                        background: `linear-gradient(135deg,${C.accent},#06b6d4)`,
-                        display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, flexShrink: 0 }}>
-                        {r.userId?.avatar
-                          ? <img src={r.userId.avatar} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
-                          : '🦊'}
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+                      <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                        <div style={{ width: 34, height: 34, borderRadius: '50%',
+                          background: `linear-gradient(135deg,${C.accent},#06b6d4)`,
+                          display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, flexShrink: 0 }}>
+                          {r.userId?.avatar
+                            ? <img src={r.userId.avatar} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
+                            : '🦊'}
+                        </div>
+                        <div>
+                          <p style={{ fontSize: 13, fontWeight: 700, color: C.accent, margin: 0 }}>{r.userId?.username || 'User'}</p>
+                          <p style={{ fontSize: 11, color: C.muted, margin: 0 }}>{new Date(r.createdAt).toLocaleDateString()}</p>
+                        </div>
                       </div>
-                      <div>
-                        <p style={{ fontSize: 13, fontWeight: 700, color: C.accent, margin: 0 }}>{r.userId?.username || 'User'}</p>
-                        <p style={{ fontSize: 11, color: C.muted, margin: 0 }}>{new Date(r.createdAt).toLocaleDateString()}</p>
-                      </div>
+                      <span style={{ fontSize: 13, color: C.warning, fontWeight: 700 }}>⭐ {r.rating}/10</span>
                     </div>
-                    <span style={{ fontSize: 13, color: C.warning, fontWeight: 700 }}>⭐ {r.rating}/10</span>
-                  </div>
-                  <h4 style={{ fontSize: 13, fontWeight: 700, color: C.text, margin: '0 0 6px' }}>{r.title}</h4>
-                  <p style={{ fontSize: 12, color: C.muted, lineHeight: 1.65, margin: 0 }}>{r.body}</p>
+                    <h4 style={{ fontSize: 13, fontWeight: 700, color: C.text, margin: '0 0 6px' }}>{r.title}</h4>
+                    <p style={{ fontSize: 12, color: C.muted, lineHeight: 1.65, margin: '0 0 16px' }}>{r.body}</p>
 
-                  {/* Reactions row and Delete button */}
-                  <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 12, flexWrap: 'wrap' }}>
-                    {(['👍', '❤️', '🔥', '😮', '🖕', '👎', '🤬', '🤡'] as const).map((emoji) => (
-                      <button key={emoji}
-                        onClick={(e) => {
-                          spawnEmoji(emoji, r._id, e);
-                          handleLike(r._id);
-                        }}
-                        style={{
-                          padding: '4px 10px', background: 'rgba(255,255,255,0.03)', border: `1px solid ${C.border}`,
-                          borderRadius: 8, color: C.text, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit',
-                          display: 'flex', alignItems: 'center', gap: 4, transition: 'all 0.15s'
-                        }}
-                        onMouseEnter={(ev) => {
-                          ev.currentTarget.style.background = `${C.accent}15`;
-                          ev.currentTarget.style.borderColor = C.accent;
-                        }}
-                        onMouseLeave={(ev) => {
-                          ev.currentTarget.style.background = 'rgba(255,255,255,0.03)';
-                          ev.currentTarget.style.borderColor = C.border;
+                    {/* Reactions row and Delete button */}
+                    <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap', marginTop: 14 }}>
+                      {/* Reddit-style Vote Pill */}
+                      <div style={{
+                        display: 'flex', alignItems: 'center', background: 'rgba(255,255,255,0.03)',
+                        border: `1px solid ${C.border}`, borderRadius: 20, padding: '3px 8px', gap: 8
+                      }}>
+                        <button 
+                          onClick={() => handleVote(r._id, 'up')}
+                          style={{
+                            background: 'none', border: 'none', color: user && r.upvotes?.includes(user._id) ? '#FF4500' : C.muted,
+                            fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            padding: '2px 4px', transition: 'transform 0.15s', outline: 'none'
+                          }}
+                          onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.2)'}
+                          onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                        >
+                          ▲
+                        </button>
+                        <span style={{ 
+                          fontSize: 12, fontWeight: 800, minWidth: 16, textAlign: 'center',
+                          color: user && r.upvotes?.includes(user._id) ? '#FF4500' : (user && r.downvotes?.includes(user._id) ? '#5A73F3' : C.text)
                         }}>
-                        {emoji} {emoji === '👍' ? r.likesCount : ''}
-                      </button>
-                    ))}
-                    
-                    {user && (r.userId?._id === user._id || r.userId === user._id || (typeof r.userId === 'object' && r.userId?.username === user.username)) && (
-                      <button onClick={() => handleDeleteReview(r._id)}
-                        style={{
-                          marginLeft: 'auto', padding: '4px 10px', background: `${C.danger}15`, border: `1px solid ${C.danger}40`,
-                          borderRadius: 8, color: C.danger, fontSize: 11, cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600
-                        }}>
-                        🗑️ Delete
-                      </button>
-                    )}
+                          {r.score ?? 0}
+                        </span>
+                        <button 
+                          onClick={() => handleVote(r._id, 'down')}
+                          style={{
+                            background: 'none', border: 'none', color: user && r.downvotes?.includes(user._id) ? '#5A73F3' : C.muted,
+                            fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            padding: '2px 4px', transition: 'transform 0.15s', outline: 'none'
+                          }}
+                          onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.2)'}
+                          onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                        >
+                          ▼
+                        </button>
+                      </div>
+
+                      {/* Emoji Reaction buttons */}
+                      {[
+                        { emoji: '❤️', type: 'heart', list: r.reactionHeart },
+                        { emoji: '🔥', type: 'fire', list: r.reactionFire },
+                        { emoji: '🤪', type: 'zany', list: r.reactionZany }
+                      ].map(({ emoji, type, list }) => {
+                        const count = list?.length || 0;
+                        const hasReacted = user && list?.includes(user._id);
+                        return (
+                          <button key={type}
+                            onClick={(e) => {
+                              spawnEmoji(emoji, r._id, e);
+                              handleReact(r._id, type as 'heart' | 'fire' | 'zany');
+                            }}
+                            style={{
+                              padding: '5px 12px', background: hasReacted ? `${C.accent}20` : 'rgba(255,255,255,0.03)',
+                              border: `1px solid ${hasReacted ? C.accent : C.border}`,
+                              borderRadius: 20, color: hasReacted ? C.accentLight : C.text, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit',
+                              display: 'flex', alignItems: 'center', gap: 6, transition: 'all 0.15s'
+                            }}
+                            onMouseEnter={(ev) => {
+                              if (!hasReacted) {
+                                ev.currentTarget.style.background = `${C.accent}15`;
+                                ev.currentTarget.style.borderColor = C.accent;
+                              }
+                            }}
+                            onMouseLeave={(ev) => {
+                              if (!hasReacted) {
+                                ev.currentTarget.style.background = 'rgba(255,255,255,0.03)';
+                                ev.currentTarget.style.borderColor = C.border;
+                              }
+                            }}>
+                            {emoji} {count}
+                          </button>
+                        );
+                      })}
+                      
+                      {user && (r.userId?._id === user._id || r.userId === user._id || (typeof r.userId === 'object' && r.userId?.username === user.username)) && (
+                        <button onClick={() => handleDeleteReview(r._id)}
+                          style={{
+                            marginLeft: 'auto', padding: '5px 12px', background: `${C.danger}15`, border: `1px solid ${C.danger}40`,
+                            borderRadius: 7, color: C.danger, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600
+                          }}>
+                          🗑️ Delete
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
               ))}

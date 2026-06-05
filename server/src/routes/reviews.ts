@@ -145,22 +145,113 @@ router.delete('/:id', protect, async (req: AuthRequest, res: Response): Promise<
   }
 });
 
-// ── POST /api/reviews/:id/like  — toggle like ────────────────────────────────
+// ── POST /api/reviews/:id/vote  — Reddit-style voting ─────────────────────────
+router.post('/:id/vote', protect, async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const review = await Review.findById(req.params.id);
+    if (!review) { res.status(404).json({ message: 'Review not found.' }); return; }
+
+    const userId = req.user!._id as mongoose.Types.ObjectId;
+    const { direction } = req.body as { direction: 'up' | 'down' };
+
+    if (direction !== 'up' && direction !== 'down') {
+      res.status(400).json({ message: 'Invalid vote direction.' });
+      return;
+    }
+
+    if (!review.upvotes) review.upvotes = [];
+    if (!review.downvotes) review.downvotes = [];
+
+    const upIndex = review.upvotes.findIndex((id) => id.equals(userId));
+    const downIndex = review.downvotes.findIndex((id) => id.equals(userId));
+
+    if (direction === 'up') {
+      if (upIndex > -1) {
+        review.upvotes.splice(upIndex, 1);
+      } else {
+        review.upvotes.push(userId);
+        if (downIndex > -1) review.downvotes.splice(downIndex, 1);
+      }
+    } else {
+      if (downIndex > -1) {
+        review.downvotes.splice(downIndex, 1);
+      } else {
+        review.downvotes.push(userId);
+        if (upIndex > -1) review.upvotes.splice(upIndex, 1);
+      }
+    }
+
+    review.score = review.upvotes.length - review.downvotes.length;
+    review.likes = review.upvotes;
+    review.likesCount = review.upvotes.length;
+
+    await review.save();
+    const populated = await review.populate('userId', 'username avatar');
+    res.json({ review: populated });
+  } catch (err) {
+    console.error('Failed to vote review:', err);
+    res.status(500).json({ message: 'Failed to vote review.' });
+  }
+});
+
+// ── POST /api/reviews/:id/react  — Emoji reaction count increment ─────────────
+router.post('/:id/react', protect, async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const review = await Review.findById(req.params.id);
+    if (!review) { res.status(404).json({ message: 'Review not found.' }); return; }
+
+    const userId = req.user!._id as mongoose.Types.ObjectId;
+    const { emoji } = req.body as { emoji: 'heart' | 'fire' | 'zany' };
+
+    let field: 'reactionHeart' | 'reactionFire' | 'reactionZany';
+    if (emoji === 'heart') field = 'reactionHeart';
+    else if (emoji === 'fire') field = 'reactionFire';
+    else if (emoji === 'zany') field = 'reactionZany';
+    else {
+      res.status(400).json({ message: 'Invalid emoji reaction.' });
+      return;
+    }
+
+    if (!review[field]) review[field] = [];
+
+    const index = review[field].findIndex((id) => id.equals(userId));
+    if (index > -1) {
+      review[field].splice(index, 1);
+    } else {
+      review[field].push(userId);
+    }
+
+    await review.save();
+    const populated = await review.populate('userId', 'username avatar');
+    res.json({ review: populated });
+  } catch (err) {
+    console.error('Failed to react to review:', err);
+    res.status(500).json({ message: 'Failed to react to review.' });
+  }
+});
+
+// ── POST /api/reviews/:id/like  — legacy support ──────────────────────────────
 router.post('/:id/like', protect, async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const review = await Review.findById(req.params.id);
     if (!review) { res.status(404).json({ message: 'Review not found.' }); return; }
 
     const userId = req.user!._id as mongoose.Types.ObjectId;
-    const idx    = review.likes.findIndex((id) => id.equals(userId));
+    if (!review.upvotes) review.upvotes = [];
+    const idx = review.upvotes.findIndex((id) => id.equals(userId));
 
     if (idx === -1) {
-      review.likes.push(userId);
+      review.upvotes.push(userId);
+      const downIdx = review.downvotes ? review.downvotes.findIndex((id) => id.equals(userId)) : -1;
+      if (downIdx > -1) review.downvotes.splice(downIdx, 1);
     } else {
-      review.likes.splice(idx, 1);
+      review.upvotes.splice(idx, 1);
     }
 
-    review.likesCount = review.likes.length;
+    review.score = review.upvotes.length - (review.downvotes ? review.downvotes.length : 0);
+    review.likes = review.upvotes;
+    review.likesCount = review.upvotes.length;
+
     await review.save();
     res.json({ liked: idx === -1, likesCount: review.likesCount });
   } catch {

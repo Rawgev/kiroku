@@ -104,19 +104,25 @@ export interface CreateEntryPayload {
 
 // ─── Reviews ───────────────────────────────────────────────────────────────────
 export interface Review {
-  _id:        string;
-  userId:     { _id: string; username: string; avatar: string };
-  mediaId:    number;
-  mediaType:  string;
-  mediaTitle: string;
-  mediaCover: string;
-  rating:     number;
-  title:      string;
-  body:       string;
-  likes:      string[];
-  likesCount: number;
-  spoiler:    boolean;
-  createdAt:  string;
+  _id:           string;
+  userId:        { _id: string; username: string; avatar: string };
+  mediaId:       number;
+  mediaType:     string;
+  mediaTitle:    string;
+  mediaCover:    string;
+  rating:        number;
+  title:         string;
+  body:          string;
+  likes:         string[];
+  likesCount:    number;
+  upvotes?:      string[];
+  downvotes?:    string[];
+  score?:        number;
+  reactionHeart?: string[];
+  reactionFire?:  string[];
+  reactionZany?:  string[];
+  spoiler:       boolean;
+  createdAt:     string;
 }
 
 // ─── Watch Party ───────────────────────────────────────────────────────────────
