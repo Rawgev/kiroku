@@ -169,7 +169,7 @@ export function Profile() {
   const favorites = entries.filter((e) => e.isFavorite);
 
   return (
-    <div style={{ maxWidth: 960 }}>
+    <div style={{ maxWidth: 960, margin: '0 auto', width: '100%' }}>
       {/* Banner */}
       <div style={{
         height: 160, borderRadius: 18, marginBottom: 0, overflow: 'hidden',
@@ -280,41 +280,81 @@ export function Profile() {
 
                 <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap', marginTop: 14 }}>
                   {/* Reddit-style Vote Pill */}
-                  <div style={{
-                    display: 'flex', alignItems: 'center', background: 'rgba(255,255,255,0.03)',
-                    border: `1px solid ${C.border}`, borderRadius: 20, padding: '3px 8px', gap: 8
-                  }}>
-                    <button 
-                      onClick={() => handleVote(r._id, 'up')}
-                      style={{
-                        background: 'none', border: 'none', color: me && r.upvotes?.includes(me._id) ? '#FF4500' : C.muted,
-                        fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        padding: '2px 4px', transition: 'transform 0.15s', outline: 'none'
-                      }}
-                      onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.2)'}
-                      onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
-                    >
-                      ▲
-                    </button>
-                    <span style={{ 
-                      fontSize: 12, fontWeight: 800, minWidth: 16, textAlign: 'center',
-                      color: me && r.upvotes?.includes(me._id) ? '#FF4500' : (me && r.downvotes?.includes(me._id) ? '#5A73F3' : C.text)
-                    }}>
-                      {r.score ?? 0}
-                    </span>
-                    <button 
-                      onClick={() => handleVote(r._id, 'down')}
-                      style={{
-                        background: 'none', border: 'none', color: me && r.downvotes?.includes(me._id) ? '#5A73F3' : C.muted,
-                        fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        padding: '2px 4px', transition: 'transform 0.15s', outline: 'none'
-                      }}
-                      onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.2)'}
-                      onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
-                    >
-                      ▼
-                    </button>
-                  </div>
+                  {(() => {
+                    const isUp = me && r.upvotes?.includes(me._id);
+                    const isDown = me && r.downvotes?.includes(me._id);
+                    return (
+                      <div 
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          height: 30,
+                          background: isUp ? 'rgba(255, 69, 0, 0.08)' : (isDown ? 'rgba(90, 115, 243, 0.08)' : 'rgba(255,255,255,0.03)'),
+                          border: `1px solid ${isUp ? '#FF4500' : (isDown ? '#5A73F3' : C.border)}`,
+                          borderRadius: 20,
+                          padding: '0 8px',
+                          gap: 6,
+                          boxSizing: 'border-box',
+                          transition: 'all 0.15s'
+                        }}
+                        onMouseEnter={(e) => {
+                          if (!isUp && !isDown) {
+                            e.currentTarget.style.borderColor = C.accent;
+                            e.currentTarget.style.background = 'rgba(255,255,255,0.06)';
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (!isUp && !isDown) {
+                            e.currentTarget.style.borderColor = C.border;
+                            e.currentTarget.style.background = 'rgba(255,255,255,0.03)';
+                          }
+                        }}
+                      >
+                        <button 
+                          onClick={() => handleVote(r._id, 'up')}
+                          style={{
+                            background: 'none', border: 'none', color: isUp ? '#FF4500' : C.muted,
+                            fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            padding: '2px 4px', transition: 'all 0.15s', outline: 'none'
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.transform = 'scale(1.2)';
+                            if (!isUp) e.currentTarget.style.color = '#FF4500';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.transform = 'scale(1)';
+                            if (!isUp) e.currentTarget.style.color = C.muted;
+                          }}
+                        >
+                          ▲
+                        </button>
+                        <span style={{ 
+                          fontSize: 12, fontWeight: 800, minWidth: 16, textAlign: 'center',
+                          color: isUp ? '#FF4500' : (isDown ? '#5A73F3' : C.text)
+                        }}>
+                          {r.score ?? 0}
+                        </span>
+                        <button 
+                          onClick={() => handleVote(r._id, 'down')}
+                          style={{
+                            background: 'none', border: 'none', color: isDown ? '#5A73F3' : C.muted,
+                            fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            padding: '2px 4px', transition: 'all 0.15s', outline: 'none'
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.transform = 'scale(1.2)';
+                            if (!isDown) e.currentTarget.style.color = '#5A73F3';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.transform = 'scale(1)';
+                            if (!isDown) e.currentTarget.style.color = C.muted;
+                          }}
+                        >
+                          ▼
+                        </button>
+                      </div>
+                    );
+                  })()}
 
                   {/* Emoji Reaction buttons */}
                   {[
@@ -331,10 +371,11 @@ export function Profile() {
                           handleReact(r._id, type as 'heart' | 'fire' | 'zany');
                         }}
                         style={{
-                          padding: '5px 12px', background: hasReacted ? `${C.accent}20` : 'rgba(255,255,255,0.03)',
+                          height: 30,
+                          padding: '0 12px', background: hasReacted ? `${C.accent}20` : 'rgba(255,255,255,0.03)',
                           border: `1px solid ${hasReacted ? C.accent : C.border}`,
                           borderRadius: 20, color: hasReacted ? C.accentLight : C.text, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit',
-                          display: 'flex', alignItems: 'center', gap: 6, transition: 'all 0.15s'
+                          display: 'flex', alignItems: 'center', gap: 6, boxSizing: 'border-box', transition: 'all 0.15s'
                         }}
                         onMouseEnter={(ev) => {
                           if (!hasReacted) {
@@ -562,7 +603,7 @@ export function Community() {
     : reviews;
 
   return (
-    <div style={{ maxWidth: 760 }}>
+    <div style={{ maxWidth: 760, margin: '0 auto', width: '100%' }}>
       <h1 style={{ fontSize: 22, fontWeight: 800, color: C.text, margin: '0 0 22px' }}>💬 Community</h1>
 
       {/* My Reviews vs All Reviews filter toggle */}
@@ -636,41 +677,81 @@ export function Community() {
                   {/* Reactions row and Admin buttons */}
                   <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap', marginTop: 14 }}>
                     {/* Reddit-style Vote Pill */}
-                    <div style={{
-                      display: 'flex', alignItems: 'center', background: 'rgba(255,255,255,0.03)',
-                      border: `1px solid ${C.border}`, borderRadius: 20, padding: '3px 8px', gap: 8
-                    }}>
-                      <button 
-                        onClick={() => handleVote(r._id, 'up')}
-                        style={{
-                          background: 'none', border: 'none', color: user && r.upvotes?.includes(user._id) ? '#FF4500' : C.muted,
-                          fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          padding: '2px 4px', transition: 'transform 0.15s', outline: 'none'
-                        }}
-                        onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.2)'}
-                        onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
-                      >
-                        ▲
-                      </button>
-                      <span style={{ 
-                        fontSize: 12, fontWeight: 800, minWidth: 16, textAlign: 'center',
-                        color: user && r.upvotes?.includes(user._id) ? '#FF4500' : (user && r.downvotes?.includes(user._id) ? '#5A73F3' : C.text)
-                      }}>
-                        {r.score ?? 0}
-                      </span>
-                      <button 
-                        onClick={() => handleVote(r._id, 'down')}
-                        style={{
-                          background: 'none', border: 'none', color: user && r.downvotes?.includes(user._id) ? '#5A73F3' : C.muted,
-                          fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          padding: '2px 4px', transition: 'transform 0.15s', outline: 'none'
-                        }}
-                        onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.2)'}
-                        onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
-                      >
-                        ▼
-                      </button>
-                    </div>
+                    {(() => {
+                      const isUp = user && r.upvotes?.includes(user._id);
+                      const isDown = user && r.downvotes?.includes(user._id);
+                      return (
+                        <div 
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            height: 30,
+                            background: isUp ? 'rgba(255, 69, 0, 0.08)' : (isDown ? 'rgba(90, 115, 243, 0.08)' : 'rgba(255,255,255,0.03)'),
+                            border: `1px solid ${isUp ? '#FF4500' : (isDown ? '#5A73F3' : C.border)}`,
+                            borderRadius: 20,
+                            padding: '0 8px',
+                            gap: 6,
+                            boxSizing: 'border-box',
+                            transition: 'all 0.15s'
+                          }}
+                          onMouseEnter={(e) => {
+                            if (!isUp && !isDown) {
+                              e.currentTarget.style.borderColor = C.accent;
+                              e.currentTarget.style.background = 'rgba(255,255,255,0.06)';
+                            }
+                          }}
+                          onMouseLeave={(e) => {
+                            if (!isUp && !isDown) {
+                              e.currentTarget.style.borderColor = C.border;
+                              e.currentTarget.style.background = 'rgba(255,255,255,0.03)';
+                            }
+                          }}
+                        >
+                          <button 
+                            onClick={() => handleVote(r._id, 'up')}
+                            style={{
+                              background: 'none', border: 'none', color: isUp ? '#FF4500' : C.muted,
+                              fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              padding: '2px 4px', transition: 'all 0.15s', outline: 'none'
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.transform = 'scale(1.2)';
+                              if (!isUp) e.currentTarget.style.color = '#FF4500';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.transform = 'scale(1)';
+                              if (!isUp) e.currentTarget.style.color = C.muted;
+                            }}
+                          >
+                            ▲
+                          </button>
+                          <span style={{ 
+                            fontSize: 12, fontWeight: 800, minWidth: 16, textAlign: 'center',
+                            color: isUp ? '#FF4500' : (isDown ? '#5A73F3' : C.text)
+                          }}>
+                            {r.score ?? 0}
+                          </span>
+                          <button 
+                            onClick={() => handleVote(r._id, 'down')}
+                            style={{
+                              background: 'none', border: 'none', color: isDown ? '#5A73F3' : C.muted,
+                              fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              padding: '2px 4px', transition: 'all 0.15s', outline: 'none'
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.transform = 'scale(1.2)';
+                              if (!isDown) e.currentTarget.style.color = '#5A73F3';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.transform = 'scale(1)';
+                              if (!isDown) e.currentTarget.style.color = C.muted;
+                            }}
+                          >
+                            ▼
+                          </button>
+                        </div>
+                      );
+                    })()}
 
                     {/* Emoji Reaction buttons */}
                     {[
@@ -687,10 +768,11 @@ export function Community() {
                             handleReact(r._id, type as 'heart' | 'fire' | 'zany');
                           }}
                           style={{
-                            padding: '5px 12px', background: hasReacted ? `${C.accent}20` : 'rgba(255,255,255,0.03)',
+                            height: 30,
+                            padding: '0 12px', background: hasReacted ? `${C.accent}20` : 'rgba(255,255,255,0.03)',
                             border: `1px solid ${hasReacted ? C.accent : C.border}`,
                             borderRadius: 20, color: hasReacted ? C.accentLight : C.text, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit',
-                            display: 'flex', alignItems: 'center', gap: 6, transition: 'all 0.15s'
+                            display: 'flex', alignItems: 'center', gap: 6, boxSizing: 'border-box', transition: 'all 0.15s'
                           }}
                           onMouseEnter={(ev) => {
                             if (!hasReacted) {
