@@ -664,371 +664,371 @@ function TopNav({ sidebarOpen, setSidebarOpen, isMobile }: TopNavProps) {
             </div>
           )}
 
-        {/* Notification Bell (🔔) Button & Dropdown Container */}
-        <div ref={notifRef} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, position: 'relative' }}>
-          <button
-            onClick={() => setNotifOpen(!notifOpen)}
-            className="nav-btn"
-            style={{
-              width: 36,
-              height: 36,
-              borderRadius: 10,
-              background: notifOpen ? `${C.accent}20` : 'rgba(255, 255, 255, 0.05)',
-              border: `1px solid ${notifOpen ? C.accent : C.border}`,
-              cursor: 'pointer',
-              color: notifOpen ? C.accentLight : C.text,
-              fontSize: 15,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              outline: 'none',
-            }}
-          >
-            🔔
-          </button>
-          {!isMobile && (
-            <span style={{ fontSize: 9, color: C.muted, fontWeight: 700, letterSpacing: '0.4px', textTransform: 'uppercase' }}>
-              Notif
-            </span>
-          )}
-
-          {/* Premium Glassmorphic Notifications Dropdown */}
-          {notifOpen && (
-            <div
+          {/* Notification Bell (🔔) Button & Dropdown Container */}
+          <div ref={notifRef} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, position: 'relative' }}>
+            <button
+              onClick={() => setNotifOpen(!notifOpen)}
+              className="nav-btn"
               style={{
-                position: 'absolute',
-                top: 50,
-                right: 0,
-                width: 290,
-                background: 'rgba(20, 26, 47, 0.96)',
-                backdropFilter: 'blur(16px)',
-                border: `1px solid ${C.border}`,
-                borderRadius: 16,
-                boxShadow: '0 12px 36px rgba(0, 0, 0, 0.65), 0 0 1px rgba(139, 92, 246, 0.4)',
-                padding: '12px 0',
-                zIndex: 200,
-                animation: 'fadeIn 0.15s ease-out',
-                textAlign: 'left',
+                width: 36,
+                height: 36,
+                borderRadius: 10,
+                background: notifOpen ? `${C.accent}20` : 'rgba(255, 255, 255, 0.05)',
+                border: `1px solid ${notifOpen ? C.accent : C.border}`,
+                cursor: 'pointer',
+                color: notifOpen ? C.accentLight : C.text,
+                fontSize: 15,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                outline: 'none',
               }}
             >
+              🔔
+            </button>
+            {!isMobile && (
+              <span style={{ fontSize: 9, color: C.muted, fontWeight: 700, letterSpacing: '0.4px', textTransform: 'uppercase' }}>
+                Notif
+              </span>
+            )}
+
+            {/* Premium Glassmorphic Notifications Dropdown */}
+            {notifOpen && (
               <div
                 style={{
-                  padding: '0 16px 8px',
-                  borderBottom: '1px solid rgba(255, 255, 255, 0.06)',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
+                  position: 'absolute',
+                  top: 50,
+                  right: 0,
+                  width: 290,
+                  background: 'rgba(20, 26, 47, 0.96)',
+                  backdropFilter: 'blur(16px)',
+                  border: `1px solid ${C.border}`,
+                  borderRadius: 16,
+                  boxShadow: '0 12px 36px rgba(0, 0, 0, 0.65), 0 0 1px rgba(139, 92, 246, 0.4)',
+                  padding: '12px 0',
+                  zIndex: 200,
+                  animation: 'fadeIn 0.15s ease-out',
+                  textAlign: 'left',
                 }}
               >
-                <h3 style={{ fontSize: 12, fontWeight: 700, color: C.text, margin: 0 }}>Notifications</h3>
-                <span
-                  style={{ fontSize: 9.5, color: C.accentLight, fontWeight: 700, cursor: 'pointer' }}
-                  onClick={() => setNotifOpen(false)}
-                >
-                  Mark all read
-                </span>
-              </div>
-
-              <div style={{ maxHeight: 220, overflowY: 'auto' }}>
-                {[
-                  { title: '📺 Airing Update', text: 'Ep 11 of Witch Hat Atelier is now streaming live!', time: '2h ago' },
-                  { title: '💖 Review Liked', text: 'Raghav liked your review of ONE PIECE.', time: '5h ago' },
-                  { title: '📅 Watch Party Alert', text: 'Your upcoming watch party starts in 1 hour!', time: '1d ago' },
-                ].map((n, idx) => (
-                  <div
-                    key={idx}
-                    style={{
-                      padding: '10px 16px',
-                      borderBottom: idx === 2 ? 'none' : '1px solid rgba(255, 255, 255, 0.03)',
-                      cursor: 'pointer',
-                      transition: 'background 0.2s',
-                    }}
-                    onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(255, 255, 255, 0.03)')}
-                    onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
-                  >
-                    <p style={{ fontSize: 10.5, fontWeight: 700, color: C.text, margin: '0 0 2px' }}>{n.title}</p>
-                    <p style={{ fontSize: 10, color: C.muted, margin: '0 0 4px', lineHeight: 1.4 }}>{n.text}</p>
-                    <span style={{ fontSize: 8.5, color: C.accentLight, fontWeight: 700 }}>{n.time}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Login / Active User Profile Card */}
-        <div ref={avatarMenuRef} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, position: 'relative' }}>
-          {user ? (
-            <>
-              <button
-                onClick={() => {
-                  setAvatarMenuOpen(!avatarMenuOpen);
-                  setSubmenuActive(false);
-                }}
-                className="nav-btn"
-                aria-haspopup="true"
-                aria-expanded={avatarMenuOpen}
-                style={{
-                  width: 36,
-                  height: 36,
-                  borderRadius: '50%',
-                  cursor: 'pointer',
-                  background: user.avatar ? undefined : `linear-gradient(135deg,${C.accent},#06b6d4)`,
-                  border: `2px solid ${avatarMenuOpen ? C.accent : `${C.accent}60`}`,
-                  overflow: 'hidden',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: 16,
-                  outline: 'none',
-                  padding: 0,
-                  boxShadow: avatarMenuOpen ? `0 0 12px ${C.accent}80` : 'none',
-                }}
-              >
-                {user.avatar ? (
-                  <img src={user.avatar} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                ) : (
-                  '🦊'
-                )}
-              </button>
-              {!isMobile && (
-                <span
-                  style={{
-                    fontSize: 9,
-                    color: C.text,
-                    fontWeight: 700,
-                    maxWidth: 60,
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                  }}
-                >
-                  {user.username}
-                </span>
-              )}
-
-              {/* Premium Glassmorphic Avatar Dropdown Menu */}
-              {avatarMenuOpen && (
                 <div
                   style={{
-                    position: 'absolute',
-                    top: 50,
-                    right: 0,
-                    width: 220,
-                    background: `${C.bg2}FB`,
-                    backdropFilter: 'blur(20px)',
-                    border: `1px solid ${C.border}`,
-                    borderRadius: 16,
-                    boxShadow: '0 12px 36px rgba(0, 0, 0, 0.65), 0 0 1px rgba(139, 92, 246, 0.4)',
-                    padding: '8px 0',
-                    zIndex: 200,
-                    animation: 'fadeIn 0.15s ease-out',
-                    textAlign: 'left',
-                    overflow: 'hidden',
+                    padding: '0 16px 8px',
+                    borderBottom: '1px solid rgba(255, 255, 255, 0.06)',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
                   }}
                 >
-                  {/* MAIN MENU */}
-                  {!submenuActive ? (
-                    <div style={{ display: 'flex', flexDirection: 'column' }}>
-                      <div
-                        onClick={() => {
-                          navigate(`/user/${user.username}`);
-                          setAvatarMenuOpen(false);
-                        }}
-                        style={{
-                          padding: '10px 16px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 12,
-                          cursor: 'pointer',
-                          color: C.text,
-                          fontSize: 13,
-                          fontWeight: 600,
-                          transition: 'background 0.2s',
-                        }}
-                        onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)')}
-                        onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
-                      >
-                        <span style={{ fontSize: 16 }}>👤</span>
-                        <span>Profile</span>
-                      </div>
-
-                      <div
-                        onClick={() => {
-                          navigate('/settings');
-                          setAvatarMenuOpen(false);
-                        }}
-                        style={{
-                          padding: '10px 16px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 12,
-                          cursor: 'pointer',
-                          color: C.text,
-                          fontSize: 13,
-                          fontWeight: 600,
-                          transition: 'background 0.2s',
-                        }}
-                        onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)')}
-                        onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
-                      >
-                        <span style={{ fontSize: 16 }}>⚙️</span>
-                        <span>Settings</span>
-                      </div>
-
-                      <div
-                        onClick={() => setSubmenuActive(true)}
-                        style={{
-                          padding: '10px 16px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          cursor: 'pointer',
-                          color: C.text,
-                          fontSize: 13,
-                          fontWeight: 600,
-                          transition: 'background 0.2s',
-                        }}
-                        onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)')}
-                        onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
-                      >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                          <span style={{ fontSize: 16 }}>🎨</span>
-                          <span>Theme</span>
-                        </div>
-                        <span style={{ fontSize: 12, color: C.muted }}>➔</span>
-                      </div>
-
-                      <div
-                        style={{
-                          height: 1,
-                          background: 'rgba(255, 255, 255, 0.06)',
-                          margin: '6px 0',
-                        }}
-                      />
-
-                      <div
-                        onClick={() => {
-                          logout();
-                          setAvatarMenuOpen(false);
-                        }}
-                        style={{
-                          padding: '10px 16px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 12,
-                          cursor: 'pointer',
-                          color: C.danger,
-                          fontSize: 13,
-                          fontWeight: 600,
-                          transition: 'background 0.2s',
-                        }}
-                        onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(239, 68, 68, 0.08)')}
-                        onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
-                      >
-                        <span style={{ fontSize: 16 }}>↩️</span>
-                        <span>Logout</span>
-                      </div>
-                    </div>
-                  ) : (
-                    /* THEME SUBMENU */
-                    <div style={{ display: 'flex', flexDirection: 'column' }}>
-                      <div
-                        onClick={() => setSubmenuActive(false)}
-                        style={{
-                          padding: '8px 16px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 8,
-                          cursor: 'pointer',
-                          color: C.accentLight,
-                          fontSize: 11,
-                          fontWeight: 800,
-                          textTransform: 'uppercase',
-                          letterSpacing: '0.5px',
-                          borderBottom: '1px solid rgba(255, 255, 255, 0.06)',
-                          marginBottom: 4,
-                          transition: 'background 0.2s',
-                        }}
-                        onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(255, 255, 255, 0.03)')}
-                        onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
-                      >
-                        <span>⬅ Back</span>
-                      </div>
-
-                      {themes.map((t) => {
-                        const isCurrent = t.id === theme;
-                        return (
-                          <div
-                            key={t.id}
-                            onClick={() => {
-                              setTheme(t.id);
-                              setAvatarMenuOpen(false);
-                              setSubmenuActive(false);
-                            }}
-                            style={{
-                              padding: '10px 16px',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'space-between',
-                              cursor: 'pointer',
-                              color: isCurrent ? C.accentLight : C.text,
-                              fontSize: 13,
-                              fontWeight: isCurrent ? 700 : 500,
-                              background: isCurrent ? `${C.accent}12` : 'transparent',
-                              transition: 'background 0.2s, color 0.2s',
-                            }}
-                            onMouseEnter={(e) => (e.currentTarget.style.background = isCurrent ? `${C.accent}20` : 'rgba(255, 255, 255, 0.05)')}
-                            onMouseLeave={(e) => (e.currentTarget.style.background = isCurrent ? `${C.accent}12` : 'transparent')}
-                          >
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                              <span style={{ fontSize: 16 }}>{t.emoji}</span>
-                              <span>{t.name}</span>
-                            </div>
-                            {isCurrent && <span style={{ fontSize: 13, fontWeight: 800, color: C.accentLight }}>✓</span>}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
+                  <h3 style={{ fontSize: 12, fontWeight: 700, color: C.text, margin: 0 }}>Notifications</h3>
+                  <span
+                    style={{ fontSize: 9.5, color: C.accentLight, fontWeight: 700, cursor: 'pointer' }}
+                    onClick={() => setNotifOpen(false)}
+                  >
+                    Mark all read
+                  </span>
                 </div>
-              )}
-            </>
-          ) : (
-            <>
-              <button
-                onClick={() => navigate('/login')}
-                className="nav-btn"
-                style={{
-                  width: 36,
-                  height: 36,
-                  borderRadius: 10,
-                  background: 'rgba(255, 255, 255, 0.05)',
-                  border: `1px solid ${C.border}`,
-                  cursor: 'pointer',
-                  color: C.text,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  outline: 'none',
-                }}
-              >
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                  <circle cx="12" cy="7" r="4"></circle>
-                </svg>
-              </button>
-              {!isMobile && (
-                <span style={{ fontSize: 9, color: C.muted, fontWeight: 700, letterSpacing: '0.4px', textTransform: 'uppercase' }}>
-                  Login
-                </span>
-              )}
-            </>
-          )}
+
+                <div style={{ maxHeight: 220, overflowY: 'auto' }}>
+                  {[
+                    { title: '📺 Airing Update', text: 'Ep 11 of Witch Hat Atelier is now streaming live!', time: '2h ago' },
+                    { title: '💖 Review Liked', text: 'Raghav liked your review of ONE PIECE.', time: '5h ago' },
+                    { title: '📅 Watch Party Alert', text: 'Your upcoming watch party starts in 1 hour!', time: '1d ago' },
+                  ].map((n, idx) => (
+                    <div
+                      key={idx}
+                      style={{
+                        padding: '10px 16px',
+                        borderBottom: idx === 2 ? 'none' : '1px solid rgba(255, 255, 255, 0.03)',
+                        cursor: 'pointer',
+                        transition: 'background 0.2s',
+                      }}
+                      onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(255, 255, 255, 0.03)')}
+                      onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+                    >
+                      <p style={{ fontSize: 10.5, fontWeight: 700, color: C.text, margin: '0 0 2px' }}>{n.title}</p>
+                      <p style={{ fontSize: 10, color: C.muted, margin: '0 0 4px', lineHeight: 1.4 }}>{n.text}</p>
+                      <span style={{ fontSize: 8.5, color: C.accentLight, fontWeight: 700 }}>{n.time}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Login / Active User Profile Card */}
+          <div ref={avatarMenuRef} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, position: 'relative' }}>
+            {user ? (
+              <>
+                <button
+                  onClick={() => {
+                    setAvatarMenuOpen(!avatarMenuOpen);
+                    setSubmenuActive(false);
+                  }}
+                  className="nav-btn"
+                  aria-haspopup="true"
+                  aria-expanded={avatarMenuOpen}
+                  style={{
+                    width: 36,
+                    height: 36,
+                    borderRadius: '50%',
+                    cursor: 'pointer',
+                    background: user.avatar ? undefined : `linear-gradient(135deg,${C.accent},#06b6d4)`,
+                    border: `2px solid ${avatarMenuOpen ? C.accent : `${C.accent}60`}`,
+                    overflow: 'hidden',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: 16,
+                    outline: 'none',
+                    padding: 0,
+                    boxShadow: avatarMenuOpen ? `0 0 12px ${C.accent}80` : 'none',
+                  }}
+                >
+                  {user.avatar ? (
+                    <img src={user.avatar} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  ) : (
+                    '🦊'
+                  )}
+                </button>
+                {!isMobile && (
+                  <span
+                    style={{
+                      fontSize: 9,
+                      color: C.text,
+                      fontWeight: 700,
+                      maxWidth: 60,
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {user.username}
+                  </span>
+                )}
+
+                {/* Premium Glassmorphic Avatar Dropdown Menu */}
+                {avatarMenuOpen && (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: 50,
+                      right: 0,
+                      width: 220,
+                      background: `${C.bg2}FB`,
+                      backdropFilter: 'blur(20px)',
+                      border: `1px solid ${C.border}`,
+                      borderRadius: 16,
+                      boxShadow: '0 12px 36px rgba(0, 0, 0, 0.65), 0 0 1px rgba(139, 92, 246, 0.4)',
+                      padding: '8px 0',
+                      zIndex: 200,
+                      animation: 'fadeIn 0.15s ease-out',
+                      textAlign: 'left',
+                      overflow: 'hidden',
+                    }}
+                  >
+                    {/* MAIN MENU */}
+                    {!submenuActive ? (
+                      <div style={{ display: 'flex', flexDirection: 'column' }}>
+                        <div
+                          onClick={() => {
+                            navigate(`/user/${user.username}`);
+                            setAvatarMenuOpen(false);
+                          }}
+                          style={{
+                            padding: '10px 16px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 12,
+                            cursor: 'pointer',
+                            color: C.text,
+                            fontSize: 13,
+                            fontWeight: 600,
+                            transition: 'background 0.2s',
+                          }}
+                          onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)')}
+                          onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+                        >
+                          <span style={{ fontSize: 16 }}>👤</span>
+                          <span>Profile</span>
+                        </div>
+
+                        <div
+                          onClick={() => {
+                            navigate('/settings');
+                            setAvatarMenuOpen(false);
+                          }}
+                          style={{
+                            padding: '10px 16px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 12,
+                            cursor: 'pointer',
+                            color: C.text,
+                            fontSize: 13,
+                            fontWeight: 600,
+                            transition: 'background 0.2s',
+                          }}
+                          onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)')}
+                          onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+                        >
+                          <span style={{ fontSize: 16 }}>⚙️</span>
+                          <span>Settings</span>
+                        </div>
+
+                        <div
+                          onClick={() => setSubmenuActive(true)}
+                          style={{
+                            padding: '10px 16px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            cursor: 'pointer',
+                            color: C.text,
+                            fontSize: 13,
+                            fontWeight: 600,
+                            transition: 'background 0.2s',
+                          }}
+                          onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)')}
+                          onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                            <span style={{ fontSize: 16 }}>🎨</span>
+                            <span>Theme</span>
+                          </div>
+                          <span style={{ fontSize: 12, color: C.muted }}>➔</span>
+                        </div>
+
+                        <div
+                          style={{
+                            height: 1,
+                            background: 'rgba(255, 255, 255, 0.06)',
+                            margin: '6px 0',
+                          }}
+                        />
+
+                        <div
+                          onClick={() => {
+                            logout();
+                            setAvatarMenuOpen(false);
+                          }}
+                          style={{
+                            padding: '10px 16px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 12,
+                            cursor: 'pointer',
+                            color: C.danger,
+                            fontSize: 13,
+                            fontWeight: 600,
+                            transition: 'background 0.2s',
+                          }}
+                          onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(239, 68, 68, 0.08)')}
+                          onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+                        >
+                          <span style={{ fontSize: 16 }}>↩️</span>
+                          <span>Logout</span>
+                        </div>
+                      </div>
+                    ) : (
+                      /* THEME SUBMENU */
+                      <div style={{ display: 'flex', flexDirection: 'column' }}>
+                        <div
+                          onClick={() => setSubmenuActive(false)}
+                          style={{
+                            padding: '8px 16px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 8,
+                            cursor: 'pointer',
+                            color: C.accentLight,
+                            fontSize: 11,
+                            fontWeight: 800,
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.5px',
+                            borderBottom: '1px solid rgba(255, 255, 255, 0.06)',
+                            marginBottom: 4,
+                            transition: 'background 0.2s',
+                          }}
+                          onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(255, 255, 255, 0.03)')}
+                          onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+                        >
+                          <span>⬅ Back</span>
+                        </div>
+
+                        {themes.map((t) => {
+                          const isCurrent = t.id === theme;
+                          return (
+                            <div
+                              key={t.id}
+                              onClick={() => {
+                                setTheme(t.id);
+                                setAvatarMenuOpen(false);
+                                setSubmenuActive(false);
+                              }}
+                              style={{
+                                padding: '10px 16px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                cursor: 'pointer',
+                                color: isCurrent ? C.accentLight : C.text,
+                                fontSize: 13,
+                                fontWeight: isCurrent ? 700 : 500,
+                                background: isCurrent ? `${C.accent}12` : 'transparent',
+                                transition: 'background 0.2s, color 0.2s',
+                              }}
+                              onMouseEnter={(e) => (e.currentTarget.style.background = isCurrent ? `${C.accent}20` : 'rgba(255, 255, 255, 0.05)')}
+                              onMouseLeave={(e) => (e.currentTarget.style.background = isCurrent ? `${C.accent}12` : 'transparent')}
+                            >
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                                <span style={{ fontSize: 16 }}>{t.emoji}</span>
+                                <span>{t.name}</span>
+                              </div>
+                              {isCurrent && <span style={{ fontSize: 13, fontWeight: 800, color: C.accentLight }}>✓</span>}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </>
+            ) : (
+              <>
+                <button
+                  onClick={() => navigate('/login')}
+                  className="nav-btn"
+                  style={{
+                    width: 36,
+                    height: 36,
+                    borderRadius: 10,
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    border: `1px solid ${C.border}`,
+                    cursor: 'pointer',
+                    color: C.text,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    outline: 'none',
+                  }}
+                >
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="12" cy="7" r="4"></circle>
+                  </svg>
+                </button>
+                {!isMobile && (
+                  <span style={{ fontSize: 9, color: C.muted, fontWeight: 700, letterSpacing: '0.4px', textTransform: 'uppercase' }}>
+                    Login
+                  </span>
+                )}
+              </>
+            )}
+          </div>
         </div>
-      </div>
-    )}
-  </header>
+      )}
+    </header>
   );
 }
 
@@ -1125,7 +1125,7 @@ export function Layout() {
           style={{
             flex: 1,
             overflowY: 'auto',
-            padding: isMobile ? '12px 10px 24px' : '22px 24px 32px',
+            padding: isMobile ? '12px 10px 80px' : '22px 24px 32px',
             animation: 'fadeIn 0.25s ease',
             display: 'flex',
             flexDirection: 'column',
