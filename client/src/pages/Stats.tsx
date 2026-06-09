@@ -45,7 +45,11 @@ export default function Stats() {
   const radarData   = genreData.slice(0, 8).map((g) => ({ subject: g.name, count: g.val }));
 
   const chartStyle = { background: 'transparent' };
-  const tooltip = { contentStyle: { background: C.card, border: `1px solid ${C.border}`, borderRadius: 8, fontSize: 12 } };
+  const tooltip = {
+    contentStyle: { background: C.card, border: `1px solid ${C.border}`, borderRadius: 8, fontSize: 12 },
+    itemStyle: { color: C.text },
+    labelStyle: { color: C.text }
+  };
 
   return (
     <div style={{ maxWidth: 1100 }}>
