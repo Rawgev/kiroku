@@ -104,14 +104,17 @@ export function Modal({ open, onClose, title, children, width = 480 }: ModalProp
       display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
       onClick={onClose}>
       <div style={{ background: C.bg2, border: `1px solid ${C.border}`, borderRadius: 18,
-        padding: 24, width: '100%', maxWidth: width, position: 'relative' }}
+        padding: 24, width: '100%', maxWidth: width, position: 'relative',
+        maxHeight: 'calc(100vh - 48px)', display: 'flex', flexDirection: 'column' }}
         onClick={(e) => e.stopPropagation()}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, flexShrink: 0 }}>
           <h2 style={{ fontSize: 18, fontWeight: 700, color: C.text, margin: 0 }}>{title}</h2>
           <button onClick={onClose} style={{ background: 'none', border: 'none', color: C.muted,
             fontSize: 20, cursor: 'pointer', lineHeight: 1 }}>✕</button>
         </div>
-        {children}
+        <div style={{ overflowY: 'auto', flex: 1, paddingRight: 4 }}>
+          {children}
+        </div>
       </div>
     </div>
   );
