@@ -99,7 +99,7 @@ export default function Sidebar({ setSidebarOpen, isMobile = false }: SidebarPro
       </div>
       {/* Main nav */}
       <nav style={{ padding: '10px 8px 0' }}>
-        {NAV.map((item) => {
+        {(user?.role === 'admin' ? [...NAV, { icon: '🛡️', label: 'Admin Panel', path: '/admin' }] : NAV).map((item) => {
           const isAnime = item.path === '/anime';
           const isManga = item.path === '/manga';
           const isHome = item.path === '/';

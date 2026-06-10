@@ -853,6 +853,31 @@ function TopNav({ sidebarOpen, setSidebarOpen, isMobile }: TopNavProps) {
                           <span>Profile</span>
                         </div>
 
+                        {user.role === 'admin' && (
+                          <div
+                            onClick={() => {
+                              navigate('/admin');
+                              setAvatarMenuOpen(false);
+                            }}
+                            style={{
+                              padding: '10px 16px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 12,
+                              cursor: 'pointer',
+                              color: C.accentLight,
+                              fontSize: 13,
+                              fontWeight: 600,
+                              transition: 'background 0.2s',
+                            }}
+                            onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)')}
+                            onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+                          >
+                            <span style={{ fontSize: 16 }}>🛡️</span>
+                            <span>Admin Panel</span>
+                          </div>
+                        )}
+
                         <div
                           onClick={() => {
                             navigate('/settings');
