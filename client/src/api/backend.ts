@@ -63,8 +63,11 @@ export const reactReview = (id: string, emoji: 'heart' | 'fire' | 'zany') =>
 // User
 export const getProfile = () => api.get<{ user: User }>('/users/profile').then((r) => r.data.user);
 
-export const updateProfile = (data: { username?: string; bio?: string; avatar?: string }) =>
+export const updateProfile = (data: { username?: string; bio?: string; avatar?: string; banner?: string }) =>
   api.put<{ user: User }>('/users/profile', data).then((r) => r.data.user);
+
+export const uploadImage = (base64: string) =>
+  api.post<{ url: string }>('/users/profile/upload', { image: base64 }).then((r) => r.data);
 
 export const getPublicProfile = (username: string) =>
   api.get(`/users/${username}`).then((r) => r.data);
@@ -87,7 +90,7 @@ export const updateWatchParty = (id: string, data: Partial<WatchParty>) =>
 
 export const deleteWatchParty = (id: string) => api.delete(`/watchparty/${id}`);
 
-export const addWatchPartyItem = (partyId: string, item: { mediaId: number; title: string; coverImage: string; totalEps?: number; airingDay?: string }) =>
+export const addWatchPartyItem = (partyId: string, item: { mediaId: number; title: string; coverImage: string; mediaType?: string; totalEps?: number; airingDay?: string }) =>
   api.post<{ party: WatchParty }>(`/watchparty/${partyId}/items`, item).then((r) => r.data.party);
 
 export const updateWatchPartyItem = (partyId: string, itemId: string, data: { currentEp?: number; completed?: boolean }) =>
