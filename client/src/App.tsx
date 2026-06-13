@@ -10,7 +10,6 @@ import MangaDetail from './pages/MangaDetail';
 import Library from './pages/Library';
 import Stats from './pages/Stats';
 import { Profile, Community, WatchPartyPage, Login, Register, OAuthCallback, Admin } from './pages/Pages';
-import Settings from './pages/Settings';
 import { C } from './constants/colors';
 import { HealthCheckLoader } from './components/ui/HealthCheckLoader';
 
@@ -85,7 +84,6 @@ export default function App() {
                 Before this fix, Profile received useParams().username = undefined
                 and always showed "User not found." */}
             <Route path="/profile" element={<Protected><ProfileRedirect /></Protected>} />
-            <Route path="/settings" element={<Protected><Settings /></Protected>} />
 
             {/* Admin */}
             <Route path="/admin" element={<Protected><AdminRoute><Admin /></AdminRoute></Protected>} />
