@@ -7,7 +7,7 @@ import { AnimeCard, SkeletonCard, SectionHeader, HScroll, Modal, SpotlightHero }
 import { C, STATUS_LABELS } from '../constants/colors';
 import type { AniListMedia, WatchStatus } from '../types';
 
-const STATUSES: WatchStatus[] = ['watching', 'plan_to_watch', 'completed', 'dropped'];
+
 
 export default function Home() {
   const navigate = useNavigate();
@@ -141,7 +141,10 @@ export default function Home() {
           <div>
             <label style={{ fontSize: 12, color: C.muted, display: 'block', marginBottom: 6 }}>Status</label>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-              {STATUSES.map((s) => (
+              {(addModal?.type === 'MANGA'
+                ? ['reading', 'plan_to_read', 'completed', 'on_hold', 'dropped'] as WatchStatus[]
+                : ['watching', 'plan_to_watch', 'completed', 'on_hold', 'dropped'] as WatchStatus[]
+              ).map((s) => (
                 <button key={s} onClick={() => setStatus(s)}
                   style={{ padding: '7px 14px', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit',
                     fontSize: 12, fontWeight: 600, border: '1px solid',
