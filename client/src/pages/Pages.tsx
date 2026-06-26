@@ -3,15 +3,16 @@
 // ─────────────────────────────────────────────────────────────────────────────
 import { useEffect, useState, FormEvent } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getPublicProfile, getUserLibrary, getReviews, updateProfile } from '../api/backend';
+import { getPublicProfile, getUserLibrary, getReviews, updateProfile, uploadImage } from '../api/backend';
+import { fetchMediaDetail } from '../api/anilist';
 import { useAuth } from '../context/AuthContext';
 import { ConfirmDeleteModal, StatusBadge, Modal, Spinner } from '../components/ui';
-import { C, inputStyle, btnPrimaryStyle } from '../constants/colors';
+import { C, inputStyle, btnPrimaryStyle, btnGhostStyle } from '../constants/colors';
 import type { User, MediaEntry, Review } from '../types';
-
+import { useRef } from 'react';
 export function Profile() {
   const { username } = useParams<{ username: string }>();
-  const { user: me } = useAuth();
+  const { user: me, refreshUser } = useAuth();
   const navigate = useNavigate();
 
   const [profile, setProfile] = useState<User | null>(null);
@@ -23,6 +24,43 @@ export function Profile() {
   const [editOpen, setEditOpen] = useState(false);
   const [bio, setBio] = useState('');
   const [saving, setSaving] = useState(false);
+
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+  const bannerInputRef = useRef<HTMLInputElement>(null);
+
+  // Edit Profile custom states
+  const [tempAvatar, setTempAvatar] = useState('');
+  const [tempBanner, setTempBanner] = useState('');
+  const [favoriteDetails, setFavoriteDetails] = useState<any[]>([]);
+  const [loadingFavorites, setLoadingFavorites] = useState(false);
+
+  useEffect(() => {
+    if (editOpen && profile) {
+      setBio(profile.bio || '');
+      setTempAvatar(profile.avatar || '');
+      setTempBanner(profile.banner || '');
+    }
+  }, [editOpen, profile]);
+
+  useEffect(() => {
+    if (!editOpen || favoriteDetails.length > 0 || entries.length === 0) return;
+    const favs = entries.filter((e) => e.isFavorite);
+    if (favs.length === 0) return;
+
+    setLoadingFavorites(true);
+    Promise.all(
+      favs.map((f) =>
+        fetchMediaDetail(f.mediaId, f.mediaType === 'manga' ? 'MANGA' : 'ANIME')
+          .then((res) => res.Media)
+          .catch(() => null)
+      )
+    )
+      .then((results) => {
+        setFavoriteDetails(results.filter((m) => m !== null));
+      })
+      .catch(console.error)
+      .finally(() => setLoadingFavorites(false));
+  }, [editOpen, entries, favoriteDetails.length]);
 
   // Review editing states
   const [editModalOpen, setEditModalOpen] = useState(false);
@@ -131,11 +169,43 @@ export function Profile() {
   const handleSave = async () => {
     setSaving(true);
     try {
-      const updated = await updateProfile({ bio });
-      setProfile((p) => p ? { ...p, bio: updated.bio } : p);
+      const updated = await updateProfile({ bio, avatar: tempAvatar, banner: tempBanner });
+      setProfile((p) => p ? { ...p, bio: updated.bio, avatar: updated.avatar, banner: updated.banner } : p);
+      if (refreshUser) {
+        await refreshUser().catch(() => {});
+      }
       setEditOpen(false);
     } catch { alert('Failed to update.'); }
     finally { setSaving(false); }
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>, field: 'avatar' | 'banner') => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert('File size too large. Limit is 5MB.');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = async () => {
+      const base64 = reader.result as string;
+      try {
+        setSaving(true);
+        const { url } = await uploadImage(base64);
+        if (field === 'avatar') {
+          setTempAvatar(url);
+        } else {
+          setTempBanner(url);
+        }
+      } catch (err: any) {
+        alert(err?.response?.data?.message || 'Failed to upload image.');
+      } finally {
+        setSaving(false);
+      }
+    };
+    reader.readAsDataURL(file);
   };
 
   const openEditModal = (r: Review) => {
@@ -177,12 +247,26 @@ export function Profile() {
 
   const favorites = entries.filter((e) => e.isFavorite);
 
+  const allCharacters = favoriteDetails.flatMap((m) =>
+    m.characters?.edges?.map((edge: any) => ({
+      name: edge.node.name.full,
+      image: edge.node.image.large || edge.node.image.medium,
+      title: m.title.english || m.title.romaji,
+    })) || []
+  );
+  const uniqueCharacters = Array.from(new Map(allCharacters.map(c => [c.name, c])).values()).slice(0, 24);
+
   return (
     <div style={{ maxWidth: 960, margin: '0 auto', width: '100%' }}>
       {/* Banner */}
       <div style={{
-        height: 160, borderRadius: 18, marginBottom: 0, overflow: 'hidden',
-        background: `linear-gradient(135deg, ${C.accent}40, #06b6d440)`
+        width: '100%',
+        aspectRatio: '4.8 / 1',
+        borderRadius: 18,
+        marginBottom: 0,
+        overflow: 'hidden',
+        background: profile.banner ? `url(${profile.banner}) center/cover no-repeat` : `linear-gradient(135deg, ${C.accent}40, #06b6d440)`,
+        border: `1px solid ${C.border}`
       }} />
 
       {/* Profile header */}
@@ -293,7 +377,7 @@ export function Profile() {
                     const isUp = me && r.upvotes?.includes(me._id);
                     const isDown = me && r.downvotes?.includes(me._id);
                     return (
-                      <div 
+                      <div
                         style={{
                           display: 'flex',
                           alignItems: 'center',
@@ -319,7 +403,7 @@ export function Profile() {
                           }
                         }}
                       >
-                        <button 
+                        <button
                           onClick={() => handleVote(r._id, 'up')}
                           style={{
                             background: 'none', border: 'none', color: isUp ? '#FF4500' : C.muted,
@@ -337,13 +421,13 @@ export function Profile() {
                         >
                           ▲
                         </button>
-                        <span style={{ 
+                        <span style={{
                           fontSize: 12, fontWeight: 800, minWidth: 16, textAlign: 'center',
                           color: isUp ? '#FF4500' : (isDown ? '#5A73F3' : C.text)
                         }}>
                           {r.score ?? 0}
                         </span>
-                        <button 
+                        <button
                           onClick={() => handleVote(r._id, 'down')}
                           style={{
                             background: 'none', border: 'none', color: isDown ? '#5A73F3' : C.muted,
@@ -447,20 +531,292 @@ export function Profile() {
       )}
 
       <Modal open={editOpen} onClose={() => setEditOpen(false)} title="Edit Profile">
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16, maxWidth: 500, margin: '0 auto' }}>
+          {/* File Inputs (hidden) */}
+          <input
+            type="file"
+            ref={avatarInputRef}
+            onChange={(e) => handleFileChange(e, 'avatar')}
+            accept="image/*"
+            style={{ display: 'none' }}
+          />
+          <input
+            type="file"
+            ref={bannerInputRef}
+            onChange={(e) => handleFileChange(e, 'banner')}
+            accept="image/*"
+            style={{ display: 'none' }}
+          />
+
+          {/* Profile Preview Block */}
+          <div>
+            <span style={{ fontSize: 12, color: C.muted, display: 'block', marginBottom: 6 }}>Live Preview</span>
+            
+            {/* Banner Preview */}
+            <div style={{
+              position: 'relative',
+              width: '100%',
+              aspectRatio: '4.8 / 1',
+              borderRadius: 12,
+              background: tempBanner ? `url(${tempBanner}) center/cover no-repeat` : `linear-gradient(135deg, ${C.accent}40, #06b6d440)`,
+              border: `1px solid ${C.border}`,
+              overflow: 'hidden',
+            }}>
+              {/* Overlay / Click to upload banner */}
+              <div
+                onClick={() => bannerInputRef.current?.click()}
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  background: 'rgba(0,0,0,0.4)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  opacity: 0,
+                  transition: 'opacity 0.2s',
+                  color: '#fff',
+                  fontSize: 11,
+                  fontWeight: 600,
+                  textShadow: '0 1px 3px rgba(0,0,0,0.8)',
+                  zIndex: 3
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.opacity = '1'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.opacity = '0'; }}
+              >
+                📸 Change Banner
+              </div>
+            </div>
+
+            {/* Avatar & Info Preview Header */}
+            <div style={{ display: 'flex', gap: 12, alignItems: 'flex-end', marginTop: -24, marginBottom: 12, paddingLeft: 16 }}>
+              {/* Avatar Preview */}
+              <div style={{
+                position: 'relative',
+                width: 54,
+                height: 54,
+                borderRadius: '50%',
+                background: tempAvatar ? undefined : `linear-gradient(135deg,${C.accent},#06b6d4)`,
+                border: `3px solid ${C.bg2}`,
+                overflow: 'hidden',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: 20,
+                cursor: 'pointer',
+                zIndex: 2,
+                flexShrink: 0
+              }}
+                onClick={() => avatarInputRef.current?.click()}
+              >
+                {tempAvatar ? (
+                  <img src={tempAvatar} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                ) : '🦊'}
+                <div style={{
+                  position: 'absolute',
+                  inset: 0,
+                  background: 'rgba(0,0,0,0.4)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  opacity: 0,
+                  transition: 'opacity 0.2s',
+                  fontSize: 10,
+                  color: '#fff'
+                }}
+                  onMouseEnter={(e) => { e.currentTarget.style.opacity = '1'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.opacity = '0'; }}
+                >
+                  📸
+                </div>
+              </div>
+              <div style={{ flex: 1, paddingBottom: 2, overflow: 'hidden' }}>
+                <span style={{ fontSize: 13, fontWeight: 800, color: C.text, display: 'block' }}>{profile.username}</span>
+                <span style={{ fontSize: 10, color: C.muted, display: 'block', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                  {bio || 'No bio yet.'}
+                </span>
+              </div>
+            </div>
+            
+            {/* Quick action upload buttons */}
+            <div style={{ display: 'flex', gap: 10, marginTop: 8 }}>
+              <button
+                type="button"
+                onClick={() => avatarInputRef.current?.click()}
+                style={{ ...btnGhostStyle, flex: 1, padding: '6px 12px', fontSize: 11 }}
+              >
+                📤 Upload Custom Avatar
+              </button>
+              <button
+                type="button"
+                onClick={() => bannerInputRef.current?.click()}
+                style={{ ...btnGhostStyle, flex: 1, padding: '6px 12px', fontSize: 11 }}
+              >
+                📤 Upload Custom Banner
+              </button>
+            </div>
+          </div>
+
+          {/* Bio Input */}
           <div>
             <label style={{ fontSize: 12, color: C.muted, display: 'block', marginBottom: 6 }}>Bio</label>
-            <textarea value={bio} onChange={(e) => setBio(e.target.value)} maxLength={300} rows={4}
-              style={{ ...inputStyle, resize: 'vertical', padding: '10px 14px' }} />
+            <textarea value={bio} onChange={(e) => setBio(e.target.value)} maxLength={300} rows={3}
+              style={{ ...inputStyle, resize: 'vertical', padding: '8px 12px' }} />
           </div>
-          <button onClick={handleSave} disabled={saving}
-            style={{
-              padding: '10px 0', background: C.accent, border: 'none', borderRadius: 10,
-              color: '#fff', fontWeight: 700, fontSize: 14, cursor: saving ? 'not-allowed' : 'pointer',
-              opacity: saving ? 0.6 : 1, fontFamily: 'inherit'
-            }}>
-            {saving ? 'Saving…' : 'Save'}
-          </button>
+
+          {/* Favorite Banners Grid Selector */}
+          <div>
+            <label style={{ fontSize: 12, color: C.muted, display: 'block', marginBottom: 6 }}>
+              Select Banner from Favorites
+            </label>
+            {loadingFavorites ? (
+              <div style={{ display: 'flex', justifyContent: 'center', padding: '10px 0' }}>
+                <Spinner size={20} />
+              </div>
+            ) : favoriteDetails.filter(m => m.bannerImage).length > 0 ? (
+              <div style={{
+                display: 'flex',
+                gap: 8,
+                overflowX: 'auto',
+                paddingBottom: 6,
+                scrollbarWidth: 'thin',
+                WebkitOverflowScrolling: 'touch'
+              }}>
+                {favoriteDetails
+                  .filter((m) => m.bannerImage)
+                  .map((m) => (
+                    <div
+                      key={m.id}
+                      onClick={() => setTempBanner(m.bannerImage)}
+                      style={{
+                        position: 'relative',
+                        width: 120,
+                        height: 54,
+                        borderRadius: 8,
+                        overflow: 'hidden',
+                        cursor: 'pointer',
+                        flexShrink: 0,
+                        border: tempBanner === m.bannerImage ? `3px solid ${C.accent}` : `1px solid ${C.border}`,
+                        transition: 'border-color 0.15s, transform 0.15s'
+                      }}
+                      onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(0.98)'; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.transform = 'none'; }}
+                    >
+                      <img src={m.bannerImage} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      <div style={{
+                        position: 'absolute', bottom: 0, left: 0, right: 0,
+                        background: 'linear-gradient(to top, rgba(0,0,0,0.8), transparent)',
+                        padding: '4px 6px 2px',
+                        fontSize: 8, color: '#fff', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap',
+                        fontWeight: 600
+                      }}>
+                        {m.title.english || m.title.romaji}
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            ) : (
+              <p style={{ fontSize: 11, color: C.muted, margin: '4px 0' }}>
+                No favorite title banners available. Mark anime/manga as favorites to see them here!
+              </p>
+            )}
+          </div>
+
+          {/* Favorite Characters Grid Selector */}
+          <div>
+            <label style={{ fontSize: 12, color: C.muted, display: 'block', marginBottom: 6 }}>
+              Select Character Avatar from Favorites
+            </label>
+            {loadingFavorites ? (
+              <div style={{ display: 'flex', justifyContent: 'center', padding: '10px 0' }}>
+                <Spinner size={20} />
+              </div>
+            ) : uniqueCharacters.length > 0 ? (
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(6, 1fr)',
+                gap: 8,
+                maxHeight: 120,
+                overflowY: 'auto',
+                paddingRight: 4,
+                scrollbarWidth: 'thin'
+              }}>
+                {uniqueCharacters.map((char: any) => (
+                  <div
+                    key={char.name}
+                    onClick={() => setTempAvatar(char.image)}
+                    title={`${char.name} (${char.title})`}
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      cursor: 'pointer',
+                      textAlign: 'center'
+                    }}
+                  >
+                    <div style={{
+                      width: 44,
+                      height: 44,
+                      borderRadius: '50%',
+                      overflow: 'hidden',
+                      border: tempAvatar === char.image ? `3px solid ${C.accent}` : `1px solid ${C.border}`,
+                      boxSizing: 'border-box',
+                      transition: 'border-color 0.15s, transform 0.15s',
+                      background: C.bg
+                    }}
+                      onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.05)'; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.transform = 'none'; }}
+                    >
+                      <img src={char.image} alt={char.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    </div>
+                    <span style={{
+                      fontSize: 8,
+                      color: tempAvatar === char.image ? C.accentLight : C.muted,
+                      marginTop: 3,
+                      width: '100%',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                      fontWeight: tempAvatar === char.image ? 600 : 400
+                    }}>
+                      {char.name.split(' ')[0]}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p style={{ fontSize: 11, color: C.muted, margin: '4px 0' }}>
+                No favorite characters available. Add favorite titles with characters to choose from!
+              </p>
+            )}
+          </div>
+
+          {/* Action Buttons */}
+          <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
+            <button
+              type="button"
+              onClick={() => setEditOpen(false)}
+              style={{ ...btnGhostStyle, flex: 1, padding: '10px 0', fontSize: 13, fontWeight: 700 }}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={saving}
+              style={{
+                ...btnPrimaryStyle,
+                flex: 1,
+                padding: '10px 0',
+                fontSize: 13,
+                fontWeight: 700,
+                opacity: saving ? 0.6 : 1,
+                cursor: saving ? 'not-allowed' : 'pointer'
+              }}
+            >
+              {saving ? 'Saving…' : 'Save Changes'}
+            </button>
+          </div>
         </div>
       </Modal>
 
@@ -702,7 +1058,7 @@ export function Community() {
                   <p style={{ fontSize: 13, color: C.muted, lineHeight: 1.65, margin: '0 0 16px' }}>
                     {r.body.slice(0, 280)}{r.body.length > 280 ? '…' : ''}
                   </p>
-                  
+
                   {/* Reactions row and Admin buttons */}
                   <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap', marginTop: 14 }}>
                     {/* Reddit-style Vote Pill */}
@@ -710,7 +1066,7 @@ export function Community() {
                       const isUp = user && r.upvotes?.includes(user._id);
                       const isDown = user && r.downvotes?.includes(user._id);
                       return (
-                        <div 
+                        <div
                           style={{
                             display: 'flex',
                             alignItems: 'center',
@@ -736,7 +1092,7 @@ export function Community() {
                             }
                           }}
                         >
-                          <button 
+                          <button
                             onClick={() => handleVote(r._id, 'up')}
                             style={{
                               background: 'none', border: 'none', color: isUp ? '#FF4500' : C.muted,
@@ -754,13 +1110,13 @@ export function Community() {
                           >
                             ▲
                           </button>
-                          <span style={{ 
+                          <span style={{
                             fontSize: 12, fontWeight: 800, minWidth: 16, textAlign: 'center',
                             color: isUp ? '#FF4500' : (isDown ? '#5A73F3' : C.text)
                           }}>
                             {r.score ?? 0}
                           </span>
-                          <button 
+                          <button
                             onClick={() => handleVote(r._id, 'down')}
                             style={{
                               background: 'none', border: 'none', color: isDown ? '#5A73F3' : C.muted,
@@ -893,7 +1249,8 @@ export function Community() {
 // ─────────────────────────────────────────────────────────────────────────────
 // Watch Party Page
 // ─────────────────────────────────────────────────────────────────────────────
-import { getWatchParties, createWatchParty, updateWatchPartyItem, deleteWatchParty } from '../api/backend';
+import { getWatchParties, createWatchParty, updateWatchPartyItem, deleteWatchParty, addWatchPartyItem, deleteWatchPartyItem } from '../api/backend';
+import { searchMedia } from '../api/anilist';
 import type { WatchParty } from '../types';
 
 export function WatchPartyPage() {
@@ -906,6 +1263,93 @@ export function WatchPartyPage() {
   const [season, setSeason] = useState('Spring 2026');
   const [saving, setSaving] = useState(false);
   const [deletingPartyId, setDeletingPartyId] = useState<string | null>(null);
+
+
+  // Search & Items states
+  const [searchQueries, setSearchQueries] = useState<Record<string, string>>({});
+  const [searchTypes, setSearchTypes] = useState<Record<string, 'ANIME' | 'MANGA'>>({});
+  const [searchResults, setSearchResults] = useState<Record<string, any[]>>({});
+  const [searchingParties, setSearchingParties] = useState<Record<string, boolean>>({});
+  const searchTimeoutsRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+
+  useEffect(() => {
+    return () => {
+      // Cleanup all timeouts
+      Object.values(searchTimeoutsRef.current).forEach(clearTimeout);
+    };
+  }, []);
+
+  const handleInputChange = (partyId: string, queryText: string) => {
+    // 1. Update the query text state instantly so the input box stays responsive
+    setSearchQueries((prev) => ({ ...prev, [partyId]: queryText }));
+
+    // 2. Clear the previous timer (if any) since the user typed a new character
+    if (searchTimeoutsRef.current[partyId]) {
+      clearTimeout(searchTimeoutsRef.current[partyId]);
+    }
+
+    if (!queryText.trim()) {
+      setSearchResults((prev) => ({ ...prev, [partyId]: [] }));
+      return;
+    }
+
+    searchTimeoutsRef.current[partyId] = setTimeout(() => handleSearch(partyId, queryText), 350);
+  };
+  const handleSearch = async (partyId: string, queryText: string, overrideType?: 'ANIME' | 'MANGA') => {
+    if (!queryText.trim()) return;
+    setSearchingParties((prev) => ({ ...prev, [partyId]: true }));
+    try {
+      const type = overrideType || searchTypes[partyId] || 'ANIME';
+      const { search } = await searchMedia({ query: queryText, type, perPage: 5 });
+      setSearchResults((prev) => ({ ...prev, [partyId]: search.media || [] }));
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setSearchingParties((prev) => ({ ...prev, [partyId]: false }));
+    }
+  };
+
+  const handleSearchTypeChange = (partyId: string, type: 'ANIME' | 'MANGA') => {
+    setSearchTypes((prev) => ({ ...prev, [partyId]: type }));
+    const query = searchQueries[partyId] || '';
+    if (query.trim()) {
+      handleSearch(partyId, query, type);
+    } else {
+      setSearchResults((prev) => ({ ...prev, [partyId]: [] }));
+    }
+  };
+
+  const handleAddItem = async (partyId: string, media: any) => {
+    try {
+      const isManga = media.type === 'MANGA';
+      const updatedParty = await addWatchPartyItem(partyId, {
+        mediaId: media.id,
+        title: media.title.english || media.title.romaji,
+        coverImage: media.coverImage.large,
+        mediaType: isManga ? 'manga' : 'anime',
+        totalEps: isManga ? media.chapters : media.episodes,
+      });
+      setParties((prev) => prev.map((p) => p._id === partyId ? updatedParty : p));
+      setSearchQueries((prev) => ({ ...prev, [partyId]: '' }));
+      setSearchResults((prev) => ({ ...prev, [partyId]: [] }));
+    } catch (e: any) {
+      alert(e?.response?.data?.message || 'Failed to add item.');
+    }
+  };
+
+  const handleDeleteItem = async (partyId: string, itemId: string) => {
+    try {
+      await deleteWatchPartyItem(partyId, itemId);
+      setParties((prev) => prev.map((p) => {
+        if (p._id === partyId) {
+          return { ...p, items: p.items.filter((item) => item._id !== itemId) };
+        }
+        return p;
+      }));
+    } catch {
+      alert('Failed to remove item.');
+    }
+  };
 
   useEffect(() => {
     if (!user) { navigate('/login'); return; }
@@ -942,7 +1386,7 @@ export function WatchPartyPage() {
   if (!user) return null;
 
   return (
-    <div style={{ maxWidth: 900 }}>
+    <div style={{ maxWidth: 900, margin: '0 auto' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 22 }}>
         <h1 style={{ fontSize: 22, fontWeight: 800, color: C.text, margin: 0 }}>📅 Watch Parties</h1>
         <button onClick={() => setModal(true)} style={{ ...btnPrimaryStyle }}>+ New Watch Party</button>
@@ -986,7 +1430,7 @@ export function WatchPartyPage() {
                       <div style={{ flex: 1 }}>
                         <p style={{ fontSize: 13, fontWeight: 600, color: C.text, margin: '0 0 4px' }}>{item.title}</p>
                         <p style={{ fontSize: 11, color: C.muted, margin: 0 }}>
-                          Ep {item.currentEp}{item.totalEps ? `/${item.totalEps}` : ''}
+                          {item.mediaType === 'manga' ? 'Ch' : 'Ep'} {item.currentEp}{item.totalEps ? `/${item.totalEps}` : ''}
                         </p>
                       </div>
                       <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
@@ -1003,11 +1447,132 @@ export function WatchPartyPage() {
                             width: 28, height: 28, borderRadius: 7, background: C.accent, border: 'none',
                             color: '#fff', cursor: 'pointer', fontSize: 14, fontFamily: 'inherit'
                           }}>+</button>
+                        <button onClick={() => handleDeleteItem(p._id, item._id)}
+                          style={{
+                            marginLeft: 8, background: 'none', border: 'none', color: C.danger,
+                            cursor: 'pointer', fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'center'
+                          }}
+                          title="Remove from Party"
+                        >
+                          🗑️
+                        </button>
                       </div>
                     </div>
                   ))}
                 </div>
               )}
+
+              {/* Inline Search and Add Section */}
+              <div style={{ marginTop: 16, borderTop: `1px solid ${C.border}`, paddingTop: 16 }}>
+                <p style={{ fontSize: 12, fontWeight: 700, color: C.muted, margin: '0 0 8px' }}>🔍 Add Anime or Manga to watchlist</p>
+                <div style={{
+                  display: 'inline-flex',
+                  background: 'rgba(0, 0, 0, 0.25)',
+                  padding: 3,
+                  borderRadius: 10,
+                  border: `1px solid rgba(255, 255, 255, 0.04)`,
+                  marginBottom: 12,
+                  gap: 2
+                }}>
+                  {(['ANIME', 'MANGA'] as const).map((t) => {
+                    const isActive = (searchTypes[p._id] || 'ANIME') === t;
+                    return (
+                      <button
+                        key={t}
+                        onClick={() => handleSearchTypeChange(p._id, t)}
+                        style={{
+                          padding: '6px 14px',
+                          borderRadius: 8,
+                          fontSize: 11.5,
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          border: 'none',
+                          background: isActive ? C.accent : 'transparent',
+                          color: isActive ? '#fff' : C.muted,
+                          transition: 'all 0.2s ease',
+                          fontFamily: 'inherit',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 6,
+                          outline: 'none',
+                          boxShadow: isActive ? '0 2px 8px rgba(0, 0, 0, 0.4)' : 'none',
+                        }}
+                        onMouseEnter={(e) => {
+                          if (!isActive) e.currentTarget.style.color = C.text;
+                        }}
+                        onMouseLeave={(e) => {
+                          if (!isActive) e.currentTarget.style.color = C.muted;
+                        }}
+                      >
+                        {t === 'ANIME' ? '📺 Anime' : '📖 Manga'}
+                      </button>
+                    );
+                  })}
+                </div>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <input
+                    type="text"
+                    placeholder={searchTypes[p._id] === 'MANGA' ? "Search manga title..." : "Search anime title..."}
+                    value={searchQueries[p._id] || ''}
+                    onChange={(e) => handleInputChange(p._id, e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') handleSearch(p._id, searchQueries[p._id] || ''); }}
+                    style={{ ...inputStyle, flex: 1, padding: '8px 12px', fontSize: 12.5 }}
+                  />
+                  <button
+                    disabled={searchingParties[p._id]}
+                    onClick={() => handleSearch(p._id, searchQueries[p._id] || '')}
+                    style={{
+                      ...btnPrimaryStyle,
+                      fontSize: 12,
+                      padding: '8px 16px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      minWidth: 70
+                    }}
+                  >
+                    {searchingParties[p._id] ? <Spinner size={12} /> : 'Search'}
+                  </button>
+                </div>
+
+                {/* Results dropdown list */}
+                {searchResults[p._id] && searchResults[p._id].length > 0 && (
+                  <div style={{
+                    marginTop: 10, background: C.bg2, border: `1px solid ${C.border}`,
+                    borderRadius: 10, overflow: 'hidden', display: 'flex', flexDirection: 'column'
+                  }}>
+                    {searchResults[p._id].map((m) => {
+                      const isAlreadyIn = p.items.some((item) => item.mediaId === m.id);
+                      return (
+                        <div key={m.id} style={{
+                          display: 'flex', gap: 10, alignItems: 'center', padding: '8px 12px',
+                          borderBottom: `1px solid ${C.border}`, background: 'rgba(255,255,255,0.01)'
+                        }}>
+                          <img src={m.coverImage?.large} alt="" style={{ width: 28, height: 38, borderRadius: 4, objectFit: 'cover' }} />
+                          <span style={{ flex: 1, fontSize: 12, fontWeight: 600, color: C.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {m.title.english || m.title.romaji}
+                          </span>
+                          <button
+                            disabled={isAlreadyIn}
+                            onClick={() => handleAddItem(p._id, m)}
+                            style={{
+                              ...btnPrimaryStyle,
+                              fontSize: 11,
+                              padding: '4px 10px',
+                              background: isAlreadyIn ? 'transparent' : C.accent,
+                              border: isAlreadyIn ? `1px solid ${C.border}` : 'none',
+                              color: isAlreadyIn ? C.muted : '#fff',
+                              cursor: isAlreadyIn ? 'not-allowed' : 'pointer'
+                            }}
+                          >
+                            {isAlreadyIn ? 'Added' : '+ Add'}
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             </div>
           ))}
         </div>

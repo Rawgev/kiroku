@@ -53,6 +53,7 @@ export interface User {
   username:  string;
   email:     string;
   avatar:    string;
+  banner:    string;
   bio:       string;
   role:      'user' | 'admin';
   level:     number;

@@ -2,11 +2,11 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { fetchMediaDetail } from '../api/anilist';
 import { searchMangaDex, getMangaChapters, getMangaDexReadUrl, getMangaDexTitleUrl } from '../api/mangadex';
-import { addToLibrary, getLibrary, getReviews, createReview, updateEntry, deleteReview } from '../api/backend';
+import { addToLibrary, getLibrary, getReviews, createReview, updateEntry, deleteReview, getWatchParties, addWatchPartyItem } from '../api/backend';
 import { useAuth } from '../context/AuthContext';
 import { ConfirmDeleteModal, Modal, StarRating, Spinner } from '../components/ui';
 import { C, STATUS_LABELS, btnPrimaryStyle } from '../constants/colors';
-import type { AniListMedia, WatchStatus, MediaEntry, Review } from '../types';
+import type { AniListMedia, WatchStatus, MediaEntry, Review, WatchParty } from '../types';
 import type { MDManga, MDChapter } from '../api/mangadex';
 
 const STATUSES: WatchStatus[] = ['reading', 'completed', 'on_hold', 'dropped', 'plan_to_read'];
@@ -47,6 +47,30 @@ export default function MangaDetail() {
 
   // Floating emojis and reaction handlers
   const [floatingEmojis, setFloatingEmojis] = useState<{ id: number; char: string; x: number; y: number; reviewId: string }[]>([]);
+
+  // Watch Parties state
+  const [parties, setParties] = useState<WatchParty[]>([]);
+  const [partyModal, setPartyModal] = useState(false);
+  const [addingToPartyId, setAddingToPartyId] = useState<string | null>(null);
+
+  const handleAddToParty = async (partyId: string) => {
+    if (!media) return;
+    setAddingToPartyId(partyId);
+    try {
+      const updatedParty = await addWatchPartyItem(partyId, {
+        mediaId: media.id,
+        title: media.title.english || media.title.romaji,
+        coverImage: media.coverImage.large,
+        mediaType: 'manga',
+        totalEps: media.chapters,
+      });
+      setParties((prev) => prev.map((p) => p._id === partyId ? updatedParty : p));
+    } catch (e: any) {
+      alert(e?.response?.data?.message || 'Failed to add to watch party.');
+    } finally {
+      setAddingToPartyId(null);
+    }
+  };
 
   const spawnEmoji = (char: string, reviewId: string, e: React.MouseEvent) => {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -135,6 +159,8 @@ export default function MangaDetail() {
         const found = entries.find((e) => e.mediaId === Number(id));
         if (found) { setEntry(found); setStatus(found.status); setScore(found.score); }
       }).catch(() => {});
+
+      getWatchParties().then(setParties).catch(() => {});
     }
   }, [id, user]);
 
@@ -255,6 +281,11 @@ export default function MangaDetail() {
             <button onClick={() => setModal(true)} style={btnPrimaryStyle}>
               {entry ? `📋 ${STATUS_LABELS[entry.status]}` : '+ Add to Library'}
             </button>
+            {user && (
+              <button onClick={() => setPartyModal(true)} style={{ ...btnPrimaryStyle, background: 'rgba(255, 255, 255, 0.05)', border: `1px solid ${C.border}`, color: C.text }}>
+                📅 Add to Party
+              </button>
+            )}
             {mdManga && (
               <a href={getMangaDexTitleUrl(mdManga.id)} target="_blank" rel="noreferrer"
                 style={{
@@ -608,6 +639,52 @@ export default function MangaDetail() {
               opacity: saving ? 0.6 : 1, fontFamily: 'inherit' }}>
             {saving ? 'Saving…' : entry ? 'Save Changes' : 'Save to Library'}
           </button>
+        </div>
+      </Modal>
+
+      {/* Add to Watch Party Modal */}
+      <Modal open={partyModal} onClose={() => setPartyModal(false)} title="Add to Watch Party">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {parties.length === 0 ? (
+            <p style={{ color: C.muted, fontSize: 13, margin: 0, textAlign: 'center', padding: '10px 0' }}>
+              No watch parties yet. Create one on the <span onClick={() => { setPartyModal(false); navigate('/watchparty'); }} style={{ color: C.accent, cursor: 'pointer', fontWeight: 600 }}>Watch Party page</span>!
+            </p>
+          ) : (
+            parties.map((p) => {
+              const isAlreadyIn = p.items.some((item) => item.mediaId === media?.id);
+              const isLoading = addingToPartyId === p._id;
+              return (
+                <div key={p._id} style={{
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                  padding: '12px 16px', background: C.bg2, border: `1px solid ${C.border}`, borderRadius: 10
+                }}>
+                  <div>
+                    <p style={{ fontWeight: 600, color: C.text, margin: 0, fontSize: 13.5 }}>{p.name}</p>
+                    <p style={{ fontSize: 11, color: C.muted, margin: '2px 0 0' }}>{p.season}</p>
+                  </div>
+                  <button
+                    disabled={isAlreadyIn || isLoading}
+                    onClick={() => handleAddToParty(p._id)}
+                    style={{
+                      ...btnPrimaryStyle,
+                      fontSize: 12,
+                      padding: '6px 14px',
+                      background: isAlreadyIn ? 'transparent' : C.accent,
+                      border: isAlreadyIn ? `1px solid ${C.border}` : 'none',
+                      color: isAlreadyIn ? C.muted : '#fff',
+                      cursor: isAlreadyIn ? 'not-allowed' : 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      minWidth: 80
+                    }}
+                  >
+                    {isLoading ? <Spinner size={12} /> : isAlreadyIn ? 'Added ✅' : 'Add'}
+                  </button>
+                </div>
+              );
+            })
+          )}
         </div>
       </Modal>
     </div>

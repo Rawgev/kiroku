@@ -1,9 +1,20 @@
 import { Router, Request, Response } from 'express';
+import { v2 as cloudinary } from 'cloudinary';
+import fs from 'fs';
+import path from 'path';
 import User from '../models/User';
 import MediaEntry from '../models/MediaEntry';
 import Review from '../models/Review';
 import { protect, AuthRequest } from '../middleware/auth';
 import { adminOnly } from '../middleware/admin';
+
+if (process.env.CLOUDINARY_CLOUD_NAME) {
+  cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key:    process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET,
+  });
+}
 
 const router = Router();
 
@@ -20,7 +31,7 @@ router.get('/profile', protect, async (req: AuthRequest, res: Response): Promise
 // ── PUT /api/users/profile  — update own profile ─────────────────────────────
 router.put('/profile', protect, async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const { username, bio, avatar } = req.body as { username?: string; bio?: string; avatar?: string };
+    const { username, bio, avatar, banner } = req.body as { username?: string; bio?: string; avatar?: string; banner?: string };
 
     if (username) {
       const taken = await User.findOne({ username, _id: { $ne: req.user!._id } });
@@ -32,13 +43,63 @@ router.put('/profile', protect, async (req: AuthRequest, res: Response): Promise
 
     const user = await User.findByIdAndUpdate(
       req.user!._id,
-      { $set: { ...(username && { username }), ...(bio !== undefined && { bio }), ...(avatar && { avatar }) } },
+      {
+        $set: {
+          ...(username && { username }),
+          ...(bio !== undefined && { bio }),
+          ...(avatar !== undefined && { avatar }),
+          ...(banner !== undefined && { banner }),
+        },
+      },
       { new: true, runValidators: true },
     ).select('-password');
 
     res.json({ user });
   } catch {
     res.status(500).json({ message: 'Failed to update profile.' });
+  }
+});
+
+// ── POST /api/users/profile/upload  — upload avatar or banner ────────────────
+router.post('/profile/upload', protect, async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { image } = req.body as { image: string };
+    if (!image) {
+      res.status(400).json({ message: 'No image data provided.' });
+      return;
+    }
+
+    // Check if Cloudinary is configured
+    if (process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET) {
+      const uploadRes = await cloudinary.uploader.upload(image, {
+        folder: 'kiroku_profile',
+      });
+      res.json({ url: uploadRes.secure_url });
+      return;
+    }
+
+    // Fallback: local saving
+    const matches = image.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+    if (!matches || matches.length !== 3) {
+      res.status(400).json({ message: 'Invalid base64 image format.' });
+      return;
+    }
+
+    const ext = matches[1].split('/')[1] || 'png';
+    const dataBuffer = Buffer.from(matches[2], 'base64');
+    const filename = `${req.user!._id}_${Date.now()}.${ext}`;
+    const uploadDir = path.join(process.cwd(), 'uploads');
+
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+
+    fs.writeFileSync(path.join(uploadDir, filename), dataBuffer);
+    const url = `/uploads/${filename}`;
+    res.json({ url });
+  } catch (err: any) {
+    console.error('Upload error:', err);
+    res.status(500).json({ message: 'Failed to upload image.', error: err.message });
   }
 });
 

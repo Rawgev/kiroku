@@ -1,0 +1,13 @@
+{
+  "name": "kiroku",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Kiroku workspace root",
+  "scripts": {
+    "build:client": "npm run build --prefix client",
+    "build:server": "npm run build --prefix server",
+    "build": "npm run build:server && npm run build:client",
+    "dev:client": "npm run dev --prefix client",
+    "dev:server": "npm run dev --prefix server"
+  }
+}

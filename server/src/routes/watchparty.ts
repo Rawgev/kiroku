@@ -64,11 +64,11 @@ router.post('/:id/items', protect, async (req: AuthRequest, res: Response): Prom
     const party = await WatchParty.findOne({ _id: req.params.id, userId: req.user!._id });
     if (!party) { res.status(404).json({ message: 'Watch party not found.' }); return; }
 
-    const { mediaId, title, coverImage, totalEps, airingDay } = req.body;
+    const { mediaId, title, coverImage, totalEps, airingDay, mediaType } = req.body;
     const alreadyIn = party.items.find((i) => i.mediaId === mediaId);
     if (alreadyIn) { res.status(400).json({ message: 'Already in this watch party.' }); return; }
 
-    party.items.push({ mediaId, title, coverImage, mediaType: 'anime', currentEp: 0, totalEps, airingDay, completed: false } as any);
+    party.items.push({ mediaId, title, coverImage, mediaType: mediaType || 'anime', currentEp: 0, totalEps, airingDay, completed: false } as any);
     await party.save();
     res.json({ party });
   } catch {

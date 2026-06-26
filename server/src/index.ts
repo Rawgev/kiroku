@@ -2,6 +2,7 @@ import dns from 'node:dns';
 dns.setServers(['1.1.1.1', '1.0.0.1']);
 import 'dotenv/config';
 import express, { Request, Response, NextFunction } from 'express';
+import path from 'path';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
@@ -73,6 +74,7 @@ app.use(passport.initialize());
 app.use(passport.session());
 
 // ── Routes ─────────────────────────────────────────────────
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 app.use('/api/auth', authRoutes);
 app.use('/api/library', libraryRoutes);
 app.use('/api/reviews', reviewsRoutes);

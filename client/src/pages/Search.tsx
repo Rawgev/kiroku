@@ -1,9 +1,11 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { searchMedia, fetchGenres } from '../api/anilist';
-import { AnimeCard, SkeletonCard, Spinner } from '../components/ui';
-import { C, inputStyle } from '../constants/colors';
-import type { AniListMedia } from '../types';
+import { AnimeCard, SkeletonCard, Spinner, Modal } from '../components/ui';
+import { C, inputStyle, STATUS_LABELS } from '../constants/colors';
+import type { AniListMedia, WatchStatus } from '../types';
+import { useAuth } from '../context/AuthContext';
+import { addToLibrary } from '../api/backend';
 
 const FORMATS = ['TV','MOVIE','OVA','ONA','SPECIAL','MANGA','ONE_SHOT','NOVEL'];
 const SORTS   = [
@@ -16,6 +18,7 @@ const SORTS   = [
 export default function Search() {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   const [results,  setResults]  = useState<AniListMedia[]>([]);
   const [genres,   setGenres]   = useState<string[]>([]);
@@ -23,6 +26,46 @@ export default function Search() {
   const [page,     setPage]     = useState(1);
   const [hasMore,  setHasMore]  = useState(false);
   const [total,    setTotal]    = useState(0);
+
+  // Library Add states
+  const [addModal, setAddModal] = useState<AniListMedia | null>(null);
+  const [status, setStatus] = useState<WatchStatus>('plan_to_watch');
+  const [saving, setSaving] = useState(false);
+  const [toast, setToast] = useState('');
+
+  const showToast = (msg: string) => {
+    setToast(msg);
+    setTimeout(() => setToast(''), 2500);
+  };
+
+  const openAdd = (m: AniListMedia) => {
+    setStatus(m.type === 'MANGA' ? 'plan_to_read' : 'plan_to_watch');
+    setAddModal(m);
+  };
+
+  const handleAdd = async () => {
+    if (!user || !addModal) { navigate('/login'); return; }
+    setSaving(true);
+    try {
+      const totalProg = addModal.type === 'MANGA' ? addModal.chapters : addModal.episodes;
+      await addToLibrary({
+        mediaId:   addModal.id,
+        mediaType: addModal.type === 'MANGA' ? 'manga' : 'anime',
+        title:     addModal.title.english || addModal.title.romaji,
+        coverImage: addModal.coverImage.large,
+        status,
+        progress: status === 'completed' && totalProg ? totalProg : 0,
+        totalProgress: totalProg,
+        genres:    addModal.genres || [],
+      });
+      showToast(`✅ Added to ${STATUS_LABELS[status]}!`);
+      setAddModal(null);
+    } catch (e: any) {
+      showToast(e?.response?.data?.message || '❌ Already in library');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const [searchMangaDropdownOpen, setSearchMangaDropdownOpen] = useState(false);
   const searchMangaTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -247,7 +290,7 @@ export default function Search() {
           ? Array(24).fill(0).map((_, i) => <SkeletonCard key={i} w={148} />)
           : results.map((m) => (
             <AnimeCard key={m.id} media={m}
-              onAdd={() => navigate(`/${m.type === 'MANGA' ? 'manga' : 'anime'}/${m.id}`)} />
+              onAdd={openAdd} />
           ))}
       </div>
 
@@ -271,6 +314,47 @@ export default function Search() {
 
       {loading && page > 1 && (
         <div style={{ display: 'flex', justifyContent: 'center', padding: 24 }}><Spinner /></div>
+      )}
+
+      {/* Add to Library Modal */}
+      <Modal open={!!addModal} onClose={() => setAddModal(null)}
+        title={`Add "${addModal?.title.english || addModal?.title.romaji}" to Library`}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <div>
+            <label style={{ fontSize: 12, color: C.muted, display: 'block', marginBottom: 6 }}>Status</label>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+              {(addModal?.type === 'MANGA'
+                ? ['reading', 'plan_to_read', 'completed', 'on_hold', 'dropped'] as WatchStatus[]
+                : ['watching', 'plan_to_watch', 'completed', 'on_hold', 'dropped'] as WatchStatus[]
+              ).map((s) => (
+                <button key={s} onClick={() => setStatus(s)}
+                  style={{ padding: '7px 14px', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit',
+                    fontSize: 12, fontWeight: 600, border: '1px solid',
+                    background: status === s ? C.accent : 'transparent',
+                    borderColor: status === s ? C.accent : C.border,
+                    color: status === s ? '#fff' : C.muted }}>
+                  {STATUS_LABELS[s]}
+                </button>
+              ))}
+            </div>
+          </div>
+          <button onClick={handleAdd} disabled={saving}
+            style={{ padding: '10px 0', background: C.accent, border: 'none', borderRadius: 10,
+              color: '#fff', fontWeight: 700, fontSize: 14, cursor: saving ? 'not-allowed' : 'pointer',
+              opacity: saving ? 0.6 : 1, fontFamily: 'inherit' }}>
+            {saving ? 'Saving…' : 'Add to Library'}
+          </button>
+        </div>
+      </Modal>
+
+      {/* Toast */}
+      {toast && (
+        <div style={{ position: 'fixed', bottom: 28, right: 28, background: C.card,
+          border: `1px solid ${C.border}`, borderRadius: 12, padding: '12px 20px',
+          fontSize: 13, fontWeight: 600, color: C.text, zIndex: 2000,
+          boxShadow: '0 8px 24px rgba(0,0,0,0.4)', animation: 'fadeIn 0.2s ease' }}>
+          {toast}
+        </div>
       )}
     </div>
   );
